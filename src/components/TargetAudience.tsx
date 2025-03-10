@@ -10,7 +10,7 @@ const TargetAudience = () => {
       id: 0,
       icon: <Building className="h-6 w-6" />,
       title: 'Constructeurs & Promoteurs',
-      description: 'Vérifiez rapidement vos métrés sans erreur et sécurisez votre rentabilité dès l'avant-projet.',
+      description: "Vérifiez rapidement vos métrés sans erreur et sécurisez votre rentabilité dès l'avant-projet.",
       benefits: [
         'Vérification rapide des surfaces et métrés',
         'Précision dans les calculs de coûts',
@@ -33,7 +33,7 @@ const TargetAudience = () => {
     {
       id: 2,
       icon: <Ruler className="h-6 w-6" />,
-      title: 'Bureaux d'études & Ingénierie',
+      title: "Bureaux d'études & Ingénierie",
       description: 'Obtenez instantanément vos métrés et facilitez vos analyses.',
       benefits: [
         'Accès instantané aux données de métrés',
