@@ -54,7 +54,7 @@ const Header = () => {
           {/* CTA Button */}
           <div className="hidden md:block">
             <button className="btn btn-accent px-6 py-2.5 shadow-sm transform transition-transform duration-300 hover:scale-105">
-              Demandez votre accès
+              Devenir un bêta testeur
             </button>
           </div>
 
@@ -88,7 +88,7 @@ const Header = () => {
               Connexion
             </a>
             <button className="btn btn-accent py-2.5 mt-4 w-full">
-              Demandez votre accès
+              Devenir un bêta testeur
             </button>
           </div>
         </div>

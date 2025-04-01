@@ -123,7 +123,7 @@ const TargetAudience = () => {
             
             <div className="mt-8">
               <button className="btn btn-accent px-6 py-2.5">
-                Découvrir pour {audiences[activeTab].title}
+                Devenir un bêta testeur
               </button>
             </div>
           </div>

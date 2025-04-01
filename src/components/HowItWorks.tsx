@@ -17,19 +17,19 @@ const HowItWorks = () => {
     {
       id: 1,
       icon: <FileUp className="h-6 w-6" />,
-      title: "Importez votre plan",
+      title: "Import",
       description: "Téléchargez simplement vos plans au format PDF ou DWG dans l'interface Metr."
     },
     {
       id: 2,
       icon: <MousePointer className="h-6 w-6" />,
-      title: "Contrôlez vos métrés",
+      title: "Mesurez & sélectionnez",
       description: "Cliquez directement sur les surfaces du plan ou interrogez l'outil pour obtenir vos mesures."
     },
     {
       id: 3,
       icon: <FileDown className="h-6 w-6" />,
-      title: "Exportez vos métrés",
+      title: "Exportez",
       description: "Exportez instantanément vos métrés précis dans un format Excel prêt à l'emploi."
     }
   ];
@@ -46,7 +46,7 @@ const HowItWorks = () => {
             Comment ça marche ?
           </span>
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Importez, contrôlez, exportez.
+            Importez, mesurez, exportez.
           </h2>
           <p className="text-lg text-foreground/80">
             Notre solution s'intègre parfaitement dans votre flux de travail avec une interface intuitive en trois étapes simples.

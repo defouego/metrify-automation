@@ -1,9 +1,32 @@
 
-import React, { useEffect, useRef } from 'react';
-import { Check, Clock, Download, FileWarning } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Check, Clock, Download } from 'lucide-react';
 
 const WhyMetr = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [activeFeature, setActiveFeature] = useState(0);
+  
+  // Features for the carousel
+  const features = [
+    {
+      title: "Comptage automatique d'éléments",
+      description: "Créez des tableaux détaillés, comme celui des portes, en quelques clics. Identifiez et comptez automatiquement tous les éléments sur vos plans.",
+      status: "Disponible",
+      image: "/placeholder.svg"
+    },
+    {
+      title: "Détection des différences entre plans",
+      description: "Comparez facilement différentes versions de plans pour identifier les modifications. Restez informé de chaque évolution de votre projet.",
+      status: "En développement",
+      image: "/placeholder.svg"
+    },
+    {
+      title: "Sélection automatique des surfaces",
+      description: "Identifiez et sélectionnez précisément et rapidement les surfaces sur vos plans sans effort manuel.",
+      status: "En développement",
+      image: "/placeholder.svg"
+    }
+  ];
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -24,6 +47,15 @@ const WhyMetr = () => {
       elements.forEach((el) => observer.unobserve(el));
     };
   }, []);
+
+  // Auto-rotate carousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveFeature((prev) => (prev + 1) % features.length);
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [features.length]);
 
   return (
     <section className="bg-metrGray py-20 sm:py-28" id="features" ref={sectionRef}>
@@ -72,58 +104,54 @@ const WhyMetr = () => {
           </div>
         </div>
 
+        {/* Fonctionnalités Carousel - Replacing the risk elimination section */}
         <div className="mt-16 glass-card overflow-hidden reveal">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="p-8 flex flex-col justify-center">
-              <div className="inline-block mb-4">
-                <span className="inline-flex items-center rounded-full bg-destructive/10 px-3 py-1 text-sm font-medium text-destructive">
-                  Amélioration de la rentabilité
-                </span>
-              </div>
-              <h3 className="text-2xl font-bold mb-4">
-                Éliminez les risques d'erreurs coûteuses
-              </h3>
-              <p className="text-foreground/70 mb-6">
-                Une étude montre que les erreurs de métrés peuvent réduire vos marges de 15 à 25%. Metr élimine ce risque avec une précision inégalée, sécurisant ainsi vos projets et votre rentabilité.
-              </p>
-              <div className="flex items-center gap-4">
-                <button className="btn btn-accent px-6 py-2.5">
-                  Estimer mes économies
-                </button>
-                <button className="btn btn-ghost px-6 py-2.5">
-                  En savoir plus
-                </button>
+          <div className="py-8 px-4 md:p-0">
+            <div className="max-w-3xl mx-auto text-center mb-8">
+              <span className="inline-flex items-center rounded-full bg-accent/10 px-3 py-1 text-sm font-medium text-accent mb-2">
+                Fonctionnalités avancées
+              </span>
+              <h3 className="text-2xl font-bold">Découvrez nos fonctionnalités innovantes</h3>
+            </div>
+            
+            {/* Carousel Navigation */}
+            <div className="flex justify-center mb-8">
+              <div className="flex space-x-2">
+                {features.map((_, index) => (
+                  <button 
+                    key={index} 
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${index === activeFeature ? 'bg-primary w-8' : 'bg-gray-300'}`}
+                    onClick={() => setActiveFeature(index)}
+                  />
+                ))}
               </div>
             </div>
-            <div className="relative h-64 lg:h-auto bg-primary/5 overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center p-8">
-                <div className="w-full max-w-md">
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <div className="flex items-center mb-4">
-                      <FileWarning className="h-6 w-6 text-destructive mr-3" />
-                      <h4 className="font-semibold">Impact des erreurs de métrés</h4>
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-foreground/70">Méthode traditionnelle</span>
-                          <span className="text-sm font-medium">25% d'erreur</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2.5">
-                          <div className="bg-destructive h-2.5 rounded-full" style={{ width: '25%' }}></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-foreground/70">Avec Metr</span>
-                          <span className="text-sm font-medium">2% d'erreur</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2.5">
-                          <div className="bg-primary h-2.5 rounded-full" style={{ width: '2%' }}></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+            
+            {/* Carousel Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="p-6 md:p-8 flex flex-col justify-center order-2 lg:order-1">
+                <div className="inline-block mb-2">
+                  <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium 
+                    ${features[activeFeature].status === "Disponible" 
+                      ? "bg-primary/10 text-primary" 
+                      : "bg-accent/10 text-accent"}`}>
+                    {features[activeFeature].status}
+                  </span>
+                </div>
+                <h3 className="text-2xl font-bold mb-4">{features[activeFeature].title}</h3>
+                <p className="text-foreground/70 mb-6">{features[activeFeature].description}</p>
+                <button className="btn btn-accent px-6 py-2.5 w-full sm:w-auto">
+                  Devenir un bêta testeur
+                </button>
+              </div>
+              
+              <div className="p-6 bg-primary/5 flex items-center justify-center order-1 lg:order-2 min-h-[250px]">
+                <div className="w-full max-w-md aspect-video bg-white/50 rounded-lg flex items-center justify-center">
+                  <img 
+                    src={features[activeFeature].image} 
+                    alt={features[activeFeature].title}
+                    className="max-w-full max-h-full object-contain"
+                  />
                 </div>
               </div>
             </div>
