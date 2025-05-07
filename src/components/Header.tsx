@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
+import OnboardingSheet from './OnboardingSheet';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,7 +55,10 @@ const Header = () => {
 
           {/* CTA Button */}
           <div className="hidden md:block">
-            <button className="btn btn-accent px-6 py-2.5 shadow-sm transform transition-transform duration-300 hover:scale-105">
+            <button 
+              className="btn btn-accent px-6 py-2.5 shadow-sm transform transition-transform duration-300 hover:scale-105"
+              onClick={() => setIsOnboardingOpen(true)}
+            >
               Devenir un bêta testeur
             </button>
           </div>
@@ -87,12 +92,21 @@ const Header = () => {
             <a href="#login" className="text-foreground py-2 border-b border-border/30" onClick={() => setIsMenuOpen(false)}>
               Connexion
             </a>
-            <button className="btn btn-accent py-2.5 mt-4 w-full">
+            <button 
+              className="btn btn-accent py-2.5 mt-4 w-full"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setIsOnboardingOpen(true);
+              }}
+            >
               Devenir un bêta testeur
             </button>
           </div>
         </div>
       )}
+
+      {/* Onboarding Sheet */}
+      <OnboardingSheet isOpen={isOnboardingOpen} onClose={() => setIsOnboardingOpen(false)} />
     </header>
   );
 };
