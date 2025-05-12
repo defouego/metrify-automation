@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import CreateAccount from './onboarding/CreateAccount';
 import CompanyInfo from './onboarding/CompanyInfo';
-import FirstProject from './onboarding/FirstProject';
+import AccountSuccess from './onboarding/AccountSuccess';
 import { useNavigate } from 'react-router-dom';
 
 export type UserData = {
@@ -43,22 +43,18 @@ const OnboardingSheet = ({ isOpen, onClose }: OnboardingSheetProps) => {
     }
   };
 
-  const handleFinish = (goToDashboard: boolean) => {
+  const handleFinish = () => {
     onClose();
     // Reset for next time
     setStep(1);
     
-    // Navigate to dashboard
-    if (goToDashboard) {
-      navigate('/dashboard');
-    } else {
-      navigate('/project/new');
-    }
+    // Navigate to dashboard after success screen
+    navigate('/dashboard');
   };
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh] sm:h-[85vh] p-0 rounded-t-3xl bg-metrBlue border-none overflow-auto">
+      <SheetContent side="bottom" className="h-[90vh] sm:h-[85vh] p-0 rounded-t-3xl bg-white/80 backdrop-blur-lg border-none overflow-auto">
         <div className="flex justify-center items-center min-h-full p-4">
           <div className="w-full max-w-md">
             {step === 1 && (
@@ -76,7 +72,7 @@ const OnboardingSheet = ({ isOpen, onClose }: OnboardingSheetProps) => {
               />
             )}
             {step === 3 && (
-              <FirstProject onFinish={handleFinish} />
+              <AccountSuccess onFinish={handleFinish} />
             )}
           </div>
         </div>

@@ -9,6 +9,10 @@ import Dashboard from "./pages/Dashboard";
 import NewProject from "./pages/NewProject";
 import NotFound from "./pages/NotFound";
 
+// A placeholder component for future implementation
+const ProjectsPage = () => <div>Projects Page</div>;
+const ProjectView = () => <div>Project View</div>;
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -20,7 +24,9 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/project/new" element={<NewProject />} />
+          <Route path="/project/:id" element={<ProjectView />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
