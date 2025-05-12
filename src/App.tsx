@@ -6,11 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
+import Projects from "./pages/Projects";
+import Library from "./pages/Library";
 import NewProject from "./pages/NewProject";
 import NotFound from "./pages/NotFound";
 
 // A placeholder component for future implementation
-const ProjectsPage = () => <div>Projects Page</div>;
 const ProjectView = () => <div>Project View</div>;
 
 const queryClient = new QueryClient();
@@ -24,7 +25,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/library" element={<Library />} />
           <Route path="/project/new" element={<NewProject />} />
           <Route path="/project/:id" element={<ProjectView />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
