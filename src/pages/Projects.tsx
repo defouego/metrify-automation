@@ -12,14 +12,14 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import ProjectCard from '@/components/dashboard/ProjectCard';
 import { Project as DashboardProject } from '@/pages/Dashboard';
 
+// Updated ProjectStatus type to include 'archived'
+type ProjectStatus = 'active' | 'draft' | 'completed' | 'archived';
+
 // Extended Project type with lastModified
 interface Project extends DashboardProject {
   lastModified?: string;
+  status: ProjectStatus; // Override with our extended status type
 }
-
-// Update the base type import from Dashboard to include 'archived'
-// Then modify Project interface to use that updated type
-type ProjectStatus = 'active' | 'draft' | 'completed' | 'archived';
 
 // Sample projects data
 const sampleProjects: Project[] = [

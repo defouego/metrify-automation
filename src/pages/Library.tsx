@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Plus, Upload, FileUp, Search, Edit, Trash2, Filter } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Plus, Upload, Search, Edit, Trash2, Filter, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -165,6 +165,17 @@ const itemFormSchema = z.object({
 
 type ItemFormValues = z.infer<typeof itemFormSchema>;
 
+// Excel import types
+interface ExcelPreviewRow {
+  designation: string;
+  lot: string;
+  type: string;
+  unite: string;
+  prix_unitaire: string | number;
+  isValid: boolean;
+  errorMessage?: string;
+}
+
 const Library = () => {
   const [items, setItems] = useState<LibraryItem[]>(sampleItems);
   const [searchQuery, setSearchQuery] = useState('');
@@ -176,7 +187,15 @@ const Library = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
   const { toast } = useToast();
-
+  
+  // Excel import states
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [previewData, setPreviewData] = useState<ExcelPreviewRow[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [mappingStep, setMappingStep] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   // Initialize form
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemFormSchema),
@@ -277,6 +296,218 @@ const Library = () => {
       description: "L'ouvrage a été supprimé de votre bibliothèque",
       variant: "destructive",
     });
+  };
+
+  // Handle excel file upload
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    
+    // Check for valid extensions
+    const validExtensions = ['.xlsx', '.xls', '.csv'];
+    const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!validExtensions.includes(fileExtension)) {
+      toast({
+        title: "Format non supporté",
+        description: "Veuillez importer un fichier Excel (.xlsx, .xls) ou CSV (.csv)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setExcelFile(file);
+    setIsUploading(true);
+    
+    // Simulate preview data (in a real app, you'd parse the Excel file here)
+    setTimeout(() => {
+      const mockPreviewData: ExcelPreviewRow[] = [
+        {
+          designation: "Béton C25/30",
+          lot: "2- GROS ŒUVRE - MAÇONNERIE",
+          type: "Fondation",
+          unite: "M3",
+          prix_unitaire: 145.50,
+          isValid: true
+        },
+        {
+          designation: "Carrelage faïence 20x20",
+          lot: "6- CARRELAGES, REVÊTEMENTS",
+          type: "Revêtement",
+          unite: "M2",
+          prix_unitaire: 35.20,
+          isValid: true
+        },
+        {
+          designation: "Plaque de plâtre BA13",
+          lot: "4- PLÂTRERIE",
+          type: "Cloison",
+          unite: "M2",
+          prix_unitaire: 18.75,
+          isValid: true
+        },
+        {
+          designation: "Peinture acrylique",
+          lot: "8- PEINTURES",
+          type: "",
+          unite: "L",
+          prix_unitaire: "abc",
+          isValid: false,
+          errorMessage: "Prix unitaire invalide"
+        },
+        {
+          designation: "Tuiles terre cuite",
+          lot: "13- COUVERTURE, ZINGUERIE",
+          type: "Toiture",
+          unite: "M2",
+          prix_unitaire: 42.30,
+          isValid: true
+        }
+      ];
+      
+      setPreviewData(mockPreviewData);
+      setIsUploading(false);
+      setMappingStep(true);
+    }, 1000);
+  };
+  
+  // Handle drag over event
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  // Handle drop event
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    
+    // Check for valid extensions
+    const validExtensions = ['.xlsx', '.xls', '.csv'];
+    const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!validExtensions.includes(fileExtension)) {
+      toast({
+        title: "Format non supporté",
+        description: "Veuillez importer un fichier Excel (.xlsx, .xls) ou CSV (.csv)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setExcelFile(file);
+    setIsUploading(true);
+    
+    // Simulate preview data (in a real app, you'd parse the Excel file here)
+    setTimeout(() => {
+      const mockPreviewData: ExcelPreviewRow[] = [
+        {
+          designation: "Béton C25/30",
+          lot: "2- GROS ŒUVRE - MAÇONNERIE",
+          type: "Fondation",
+          unite: "M3",
+          prix_unitaire: 145.50,
+          isValid: true
+        },
+        {
+          designation: "Carrelage faïence 20x20",
+          lot: "6- CARRELAGES, REVÊTEMENTS",
+          type: "Revêtement",
+          unite: "M2",
+          prix_unitaire: 35.20,
+          isValid: true
+        },
+        {
+          designation: "Plaque de plâtre BA13",
+          lot: "4- PLÂTRERIE",
+          type: "Cloison",
+          unite: "M2",
+          prix_unitaire: 18.75,
+          isValid: true
+        },
+        {
+          designation: "Peinture acrylique",
+          lot: "8- PEINTURES",
+          type: "",
+          unite: "L",
+          prix_unitaire: "abc",
+          isValid: false,
+          errorMessage: "Prix unitaire invalide"
+        },
+        {
+          designation: "Tuiles terre cuite",
+          lot: "13- COUVERTURE, ZINGUERIE",
+          type: "Toiture",
+          unite: "M2",
+          prix_unitaire: 42.30,
+          isValid: true
+        }
+      ];
+      
+      setPreviewData(mockPreviewData);
+      setIsUploading(false);
+      setMappingStep(true);
+    }, 1000);
+  };
+  
+  // Handle import confirmation
+  const handleConfirmImport = () => {
+    // Filter out invalid rows
+    const validRows = previewData.filter(row => row.isValid);
+    
+    if (validRows.length === 0) {
+      toast({
+        title: "Import impossible",
+        description: "Aucune ligne valide à importer",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Create new items from valid rows
+    const today = new Date();
+    const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+    
+    const newItems: LibraryItem[] = validRows.map(row => ({
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+      designation: row.designation,
+      lot: row.lot,
+      type: row.type,
+      unite: row.unite as ItemUnit,
+      prix_unitaire: typeof row.prix_unitaire === 'string' ? parseFloat(row.prix_unitaire) : row.prix_unitaire,
+      date_creation: formattedDate,
+      actif: true,
+      isNew: true
+    }));
+    
+    // Add new items to the existing ones
+    setItems([...newItems, ...items]);
+    
+    toast({
+      title: "Import réussi",
+      description: `${validRows.length} ouvrages importés avec succès`,
+    });
+    
+    // Reset import state
+    setExcelFile(null);
+    setPreviewData([]);
+    setMappingStep(false);
+    setIsImportDialogOpen(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+  
+  // Handle import cancel
+  const handleCancelImport = () => {
+    setExcelFile(null);
+    setPreviewData([]);
+    setMappingStep(false);
+    setIsImportDialogOpen(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Filter items based on search and filters
@@ -480,29 +711,139 @@ const Library = () => {
               </DialogContent>
             </Dialog>
             
-            <Dialog>
+            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
-                  <FileUp className="mr-2 h-4 w-4" />
+                  <Upload className="mr-2 h-4 w-4" />
                   Importer depuis Excel
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-[700px]">
                 <DialogHeader>
                   <DialogTitle>Importer une bibliothèque</DialogTitle>
                   <DialogDescription>
                     Déposez votre fichier Excel contenant votre bibliothèque d'ouvrages.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:bg-gray-50 transition-colors">
-                  <Upload className="mx-auto h-10 w-10 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">Déposez votre fichier Excel ici, ou cliquez pour sélectionner</p>
-                  <p className="text-xs text-gray-400 mt-1">Formats supportés: .xlsx, .xls, .csv</p>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline">Annuler</Button>
-                  <Button>Importer</Button>
-                </DialogFooter>
+                
+                {!mappingStep ? (
+                  <div 
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      ref={fileInputRef} 
+                      onChange={handleExcelUpload} 
+                      accept=".xlsx,.xls,.csv"
+                    />
+                    {isUploading ? (
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 border-4 border-t-metrOrange border-gray-200 rounded-full animate-spin"></div>
+                        <p className="mt-4 text-sm text-gray-500">Traitement en cours...</p>
+                      </div>
+                    ) : excelFile ? (
+                      <div className="flex flex-col items-center">
+                        <div className="bg-green-100 text-green-800 p-2 rounded-full">
+                          <Upload className="h-8 w-8" />
+                        </div>
+                        <p className="mt-2 font-medium">{excelFile.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {(excelFile.size / 1024).toFixed(1)} KB
+                        </p>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="mt-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExcelFile(null);
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }}
+                        >
+                          <X className="h-4 w-4 mr-1" /> Supprimer
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="mx-auto h-10 w-10 text-gray-400" />
+                        <p className="mt-2 text-sm text-gray-500">Déposez votre fichier Excel ici, ou cliquez pour sélectionner</p>
+                        <p className="text-xs text-gray-400 mt-1">Formats supportés: .xlsx, .xls, .csv</p>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-sm text-gray-500 mb-2">
+                      Aperçu des 5 premières lignes
+                    </div>
+                    <div className="border rounded-md overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Désignation</TableHead>
+                            <TableHead>Lot</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Unité</TableHead>
+                            <TableHead>Prix HT</TableHead>
+                            <TableHead className="w-[100px]">Statut</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {previewData.map((row, index) => (
+                            <TableRow key={index} className={!row.isValid ? "bg-red-50" : ""}>
+                              <TableCell>{row.designation}</TableCell>
+                              <TableCell>{row.lot}</TableCell>
+                              <TableCell>{row.type || "-"}</TableCell>
+                              <TableCell>{row.unite}</TableCell>
+                              <TableCell>{typeof row.prix_unitaire === 'number' ? row.prix_unitaire.toFixed(2) : row.prix_unitaire}</TableCell>
+                              <TableCell>
+                                {row.isValid ? (
+                                  <Badge className="bg-green-100 text-green-800 border-green-200">Valide</Badge>
+                                ) : (
+                                  <Badge className="bg-red-100 text-red-800 border-red-200" title={row.errorMessage}>Erreur</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    <div className="flex justify-between mt-4">
+                      <div>
+                        <p className="text-sm font-medium">Informations</p>
+                        <p className="text-sm text-gray-500">
+                          {previewData.filter(r => r.isValid).length} lignes valides sur {previewData.length}
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" onClick={handleCancelImport}>Annuler</Button>
+                        <Button 
+                          className="bg-metrOrange hover:bg-metrOrange/90"
+                          onClick={handleConfirmImport}
+                        >
+                          Importer ({previewData.filter(r => r.isValid).length})
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                {!mappingStep && (
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Annuler</Button>
+                    <Button 
+                      className="bg-metrOrange hover:bg-metrOrange/90"
+                      disabled={!excelFile || isUploading}
+                    >
+                      Continuer
+                    </Button>
+                  </DialogFooter>
+                )}
               </DialogContent>
             </Dialog>
             
