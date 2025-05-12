@@ -33,6 +33,8 @@ interface LibraryItem {
   date_derniere_utilisation?: string;
   actif: boolean;
   isNew?: boolean;
+  bibliotheque_id?: string;
+  fichier_joint?: string;
 }
 
 // Sample data
@@ -157,7 +159,8 @@ const itemFormSchema = z.object({
   unite: z.string().min(1, "Veuillez sélectionner une unité"),
   prix_unitaire: z.coerce.number().min(0, "Le prix doit être positif"),
   description: z.string().optional(),
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  fichier_joint: z.string().optional()
 });
 
 type ItemFormValues = z.infer<typeof itemFormSchema>;
@@ -165,9 +168,9 @@ type ItemFormValues = z.infer<typeof itemFormSchema>;
 const Library = () => {
   const [items, setItems] = useState<LibraryItem[]>(sampleItems);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [unitFilter, setUnitFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [unitFilter, setUnitFilter] = useState('all');
   const [currentTab, setCurrentTab] = useState('items');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -287,17 +290,17 @@ const Library = () => {
     }
     
     // Category filter
-    if (categoryFilter && item.lot !== categoryFilter) {
+    if (categoryFilter !== 'all' && item.lot !== categoryFilter) {
       return false;
     }
     
     // Type filter
-    if (typeFilter && item.type !== typeFilter) {
+    if (typeFilter !== 'all' && item.type !== typeFilter) {
       return false;
     }
     
     // Unit filter
-    if (unitFilter && item.unite !== unitFilter) {
+    if (unitFilter !== 'all' && item.unite !== unitFilter) {
       return false;
     }
     
@@ -556,7 +559,7 @@ const Library = () => {
                           <SelectValue placeholder="Tous les lots" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Tous les lots</SelectItem>
+                          <SelectItem value="all">Tous les lots</SelectItem>
                           {categories.map(category => (
                             <SelectItem key={category} value={category}>{category}</SelectItem>
                           ))}
@@ -571,7 +574,7 @@ const Library = () => {
                           <SelectValue placeholder="Tous les types" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Tous les types</SelectItem>
+                          <SelectItem value="all">Tous les types</SelectItem>
                           {uniqueTypes.map(type => (
                             <SelectItem key={type} value={type}>{type}</SelectItem>
                           ))}
@@ -586,7 +589,7 @@ const Library = () => {
                           <SelectValue placeholder="Toutes les unités" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Toutes les unités</SelectItem>
+                          <SelectItem value="all">Toutes les unités</SelectItem>
                           {uniqueUnits.map(unit => (
                             <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                           ))}
@@ -604,7 +607,7 @@ const Library = () => {
                     <SelectValue placeholder="Lot" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous les lots</SelectItem>
+                    <SelectItem value="all">Tous les lots</SelectItem>
                     {categories.map(category => (
                       <SelectItem key={category} value={category}>{category}</SelectItem>
                     ))}
@@ -616,7 +619,7 @@ const Library = () => {
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous les types</SelectItem>
+                    <SelectItem value="all">Tous les types</SelectItem>
                     {uniqueTypes.map(type => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
@@ -628,7 +631,7 @@ const Library = () => {
                     <SelectValue placeholder="Unité" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Toutes les unités</SelectItem>
+                    <SelectItem value="all">Toutes les unités</SelectItem>
                     {uniqueUnits.map(unit => (
                       <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                     ))}

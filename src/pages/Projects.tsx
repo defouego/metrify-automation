@@ -17,7 +17,8 @@ interface Project extends DashboardProject {
   lastModified?: string;
 }
 
-// Update project status type to include 'archived'
+// Update the base type import from Dashboard to include 'archived'
+// Then modify Project interface to use that updated type
 type ProjectStatus = 'active' | 'draft' | 'completed' | 'archived';
 
 // Sample projects data
@@ -26,7 +27,7 @@ const sampleProjects: Project[] = [
     id: '1',
     name: 'Résidence Les Terrasses',
     client: 'SCI Habitat',
-    status: 'active' as ProjectStatus,
+    status: 'active',
     date: '20/04/2025',
     lastModified: '28/04/2025'
   },
@@ -34,7 +35,7 @@ const sampleProjects: Project[] = [
     id: '2',
     name: 'Bureau OpenSpace',
     client: 'TechCorp',
-    status: 'completed' as ProjectStatus,
+    status: 'completed',
     date: '15/03/2025',
     lastModified: '16/04/2025'
   },
@@ -42,7 +43,7 @@ const sampleProjects: Project[] = [
     id: '3',
     name: 'Rénovation Villa Marine',
     client: 'M. Dupont',
-    status: 'draft' as ProjectStatus,
+    status: 'draft',
     date: '10/04/2025',
     lastModified: '11/04/2025'
   },
@@ -50,7 +51,7 @@ const sampleProjects: Project[] = [
     id: '4',
     name: 'Centre commercial Est',
     client: 'Retail Invest',
-    status: 'archived' as ProjectStatus,
+    status: 'archived',
     date: '05/01/2025',
     lastModified: '20/02/2025'
   },
@@ -58,7 +59,7 @@ const sampleProjects: Project[] = [
     id: '5',
     name: 'Maison écologique',
     client: 'Mme Martin',
-    status: 'active' as ProjectStatus,
+    status: 'active',
     date: '12/04/2025',
     lastModified: '13/04/2025'
   },
@@ -66,7 +67,7 @@ const sampleProjects: Project[] = [
     id: '6',
     name: 'Immeuble résidentiel',
     client: 'SCI Horizon',
-    status: 'completed' as ProjectStatus,
+    status: 'completed',
     date: '01/03/2025',
     lastModified: '05/04/2025'
   }
