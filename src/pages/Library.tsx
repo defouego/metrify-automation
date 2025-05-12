@@ -13,30 +13,96 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 // Define types for library items
+type ItemUnit = 'CM' | 'ENS' | 'Forf' | 'GR' | 'HA' | 'H' | 'J' | 'KG' | 'KM' | 'L' | 'M2' | 'M3' | 'ML' | 'MOIS' | 'PAIRE' | 'PCE' | 'SEM' | 'T' | 'U';
+
 interface LibraryItem {
   id: string;
-  name: string;
-  category: string;
+  designation: string;
+  lot: string;
   subCategory?: string;
   type: string;
-  unit: string;
-  price: number;
-  lastUsed?: string;
-  isNew?: boolean;
+  unite: ItemUnit;
+  prix_unitaire: number;
   description?: string;
+  tags?: string[];
+  date_creation: string;
+  date_derniere_utilisation?: string;
+  actif: boolean;
+  isNew?: boolean;
 }
 
 // Sample data
 const sampleItems: LibraryItem[] = [
-  { id: '1', name: 'Béton de fondation', category: '2- GROS ŒUVRE - MAÇONNERIE', type: 'Fondation', unit: 'M3', price: 120.50, lastUsed: '15/04/2025' },
-  { id: '2', name: 'Fenêtre PVC double vitrage', category: '10- MENUISERIES EXTÉRIEURES', type: 'Menuiserie', unit: 'U', price: 425.00, lastUsed: '17/04/2025', isNew: true },
-  { id: '3', name: 'Peinture mate blanche', category: '8- PEINTURES', type: 'Finition', unit: 'L', price: 28.75, lastUsed: '10/04/2025' },
-  { id: '4', name: 'Radiateur électrique', category: '11- ÉLECTRICITÉ COURANTS FORTS', type: 'Équipement', unit: 'U', price: 199.90 },
-  { id: '5', name: 'Carrelage grès cérame', category: '6- CARRELAGES, REVÊTEMENTS', type: 'Revêtement', unit: 'M2', price: 45.20, lastUsed: '20/03/2025' },
-  { id: '6', name: 'Porte intérieure', category: '9- MENUISERIES INTÉRIEURES', type: 'Menuiserie', unit: 'U', price: 235.00, lastUsed: '05/04/2025' }
+  { 
+    id: '1', 
+    designation: 'Béton de fondation', 
+    lot: '2- GROS ŒUVRE - MAÇONNERIE', 
+    type: 'Fondation', 
+    unite: 'M3', 
+    prix_unitaire: 120.50, 
+    date_derniere_utilisation: '15/04/2025',
+    date_creation: '10/04/2025',
+    actif: true
+  },
+  { 
+    id: '2', 
+    designation: 'Fenêtre PVC double vitrage', 
+    lot: '10- MENUISERIES EXTÉRIEURES', 
+    type: 'Menuiserie', 
+    unite: 'U', 
+    prix_unitaire: 425.00, 
+    date_derniere_utilisation: '17/04/2025', 
+    date_creation: '16/04/2025',
+    actif: true,
+    isNew: true 
+  },
+  { 
+    id: '3', 
+    designation: 'Peinture mate blanche', 
+    lot: '8- PEINTURES', 
+    type: 'Finition', 
+    unite: 'L', 
+    prix_unitaire: 28.75, 
+    date_derniere_utilisation: '10/04/2025',
+    date_creation: '05/04/2025',
+    actif: true
+  },
+  { 
+    id: '4', 
+    designation: 'Radiateur électrique', 
+    lot: '11- ÉLECTRICITÉ COURANTS FORTS', 
+    type: 'Équipement', 
+    unite: 'U', 
+    prix_unitaire: 199.90,
+    date_creation: '01/04/2025',
+    actif: true
+  },
+  { 
+    id: '5', 
+    designation: 'Carrelage grès cérame', 
+    lot: '6- CARRELAGES, REVÊTEMENTS', 
+    type: 'Revêtement', 
+    unite: 'M2', 
+    prix_unitaire: 45.20, 
+    date_derniere_utilisation: '20/03/2025',
+    date_creation: '15/03/2025',
+    actif: true
+  },
+  { 
+    id: '6', 
+    designation: 'Porte intérieure', 
+    lot: '9- MENUISERIES INTÉRIEURES', 
+    type: 'Menuiserie', 
+    unite: 'U', 
+    prix_unitaire: 235.00, 
+    date_derniere_utilisation: '05/04/2025',
+    date_creation: '01/03/2025',
+    actif: true
+  }
 ];
 
 // Categories list
@@ -84,13 +150,14 @@ const units = [
 
 // Types for the item form
 const itemFormSchema = z.object({
-  name: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
-  category: z.string(),
+  designation: z.string().min(3, "La désignation doit contenir au moins 3 caractères"),
+  lot: z.string().min(1, "Veuillez sélectionner un lot"),
   subCategory: z.string().optional(),
-  type: z.string(),
-  unit: z.string(),
-  price: z.coerce.number().min(0, "Le prix doit être positif"),
-  description: z.string().optional()
+  type: z.string().min(1, "Veuillez entrer un type"),
+  unite: z.string().min(1, "Veuillez sélectionner une unité"),
+  prix_unitaire: z.coerce.number().min(0, "Le prix doit être positif"),
+  description: z.string().optional(),
+  tags: z.array(z.string()).optional()
 });
 
 type ItemFormValues = z.infer<typeof itemFormSchema>;
@@ -105,18 +172,20 @@ const Library = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Initialize form
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemFormSchema),
     defaultValues: {
-      name: '',
-      category: '',
+      designation: '',
+      lot: '',
       subCategory: '',
       type: '',
-      unit: '',
-      price: 0,
-      description: ''
+      unite: '',
+      prix_unitaire: 0,
+      description: '',
+      tags: []
     }
   });
 
@@ -133,11 +202,12 @@ const Library = () => {
   // Handle item edit
   const handleEditItem = (item: LibraryItem) => {
     form.reset({
-      name: item.name,
-      category: item.category,
+      designation: item.designation,
+      lot: item.lot,
+      subCategory: item.subCategory || '',
       type: item.type,
-      unit: item.unit,
-      price: item.price,
+      unite: item.unite,
+      prix_unitaire: item.prix_unitaire,
       description: item.description || ''
     });
     setCurrentItemId(item.id);
@@ -150,22 +220,46 @@ const Library = () => {
     if (isEditMode && currentItemId) {
       // Update existing item
       setItems(items.map(item => 
-        item.id === currentItemId ? { ...item, ...values } : item
+        item.id === currentItemId ? {
+          ...item,
+          designation: values.designation,
+          lot: values.lot,
+          subCategory: values.subCategory,
+          type: values.type,
+          unite: values.unite as ItemUnit,
+          prix_unitaire: values.prix_unitaire,
+          description: values.description
+        } : item
       ));
+      
+      toast({
+        title: "Ouvrage mis à jour",
+        description: "L'ouvrage a été modifié avec succès",
+      });
     } else {
       // Add new item - make sure all required fields are set
+      const today = new Date();
+      const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+      
       const newItem: LibraryItem = {
         id: Date.now().toString(),
-        name: values.name,
-        category: values.category,
+        designation: values.designation,
+        lot: values.lot,
         subCategory: values.subCategory,
         type: values.type,
-        unit: values.unit,
-        price: values.price,
+        unite: values.unite as ItemUnit,
+        prix_unitaire: values.prix_unitaire,
         description: values.description,
+        date_creation: formattedDate,
+        actif: true,
         isNew: true
       };
       setItems([newItem, ...items]);
+      
+      toast({
+        title: "Ouvrage créé",
+        description: "L'ouvrage a été ajouté avec succès à votre bibliothèque",
+      });
     }
     setIsDialogOpen(false);
     form.reset();
@@ -174,17 +268,26 @@ const Library = () => {
   // Handle item delete
   const handleDeleteItem = (id: string) => {
     setItems(items.filter(item => item.id !== id));
+    
+    toast({
+      title: "Ouvrage supprimé",
+      description: "L'ouvrage a été supprimé de votre bibliothèque",
+      variant: "destructive",
+    });
   };
 
   // Filter items based on search and filters
   const filteredItems = items.filter(item => {
     // Search query filter
-    if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (searchQuery && 
+        !item.designation.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !item.lot.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !item.type.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
     
     // Category filter
-    if (categoryFilter && item.category !== categoryFilter) {
+    if (categoryFilter && item.lot !== categoryFilter) {
       return false;
     }
     
@@ -194,7 +297,7 @@ const Library = () => {
     }
     
     // Unit filter
-    if (unitFilter && item.unit !== unitFilter) {
+    if (unitFilter && item.unite !== unitFilter) {
       return false;
     }
     
@@ -205,7 +308,7 @@ const Library = () => {
   const uniqueTypes = Array.from(new Set(items.map(item => item.type)));
   
   // Get unique units from items for filter
-  const uniqueUnits = Array.from(new Set(items.map(item => item.unit)));
+  const uniqueUnits = Array.from(new Set(items.map(item => item.unite)));
 
   return (
     <DashboardLayout>
@@ -235,10 +338,10 @@ const Library = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="name"
+                        name="designation"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Nom de l'ouvrage*</FormLabel>
+                            <FormLabel>Désignation*</FormLabel>
                             <FormControl>
                               <Input {...field} />
                             </FormControl>
@@ -249,7 +352,7 @@ const Library = () => {
                       
                       <FormField
                         control={form.control}
-                        name="category"
+                        name="lot"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Lot*</FormLabel>
@@ -305,7 +408,7 @@ const Library = () => {
                       
                       <FormField
                         control={form.control}
-                        name="unit"
+                        name="unite"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Unité*</FormLabel>
@@ -333,7 +436,7 @@ const Library = () => {
                       
                       <FormField
                         control={form.control}
-                        name="price"
+                        name="prix_unitaire"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Prix unitaire HT*</FormLabel>
@@ -416,8 +519,8 @@ const Library = () => {
         <Tabs value={currentTab} onValueChange={setCurrentTab} className="mb-6">
           <TabsList className="mb-6">
             <TabsTrigger value="items">📦 Ouvrages</TabsTrigger>
-            <TabsTrigger value="supplies">🧰 Fournitures</TabsTrigger>
-            <TabsTrigger value="libraries">📚 Mes bibliothèques</TabsTrigger>
+            <TabsTrigger value="supplies">💼 Fournitures</TabsTrigger>
+            <TabsTrigger value="libraries">📃 Mes bibliothèques</TabsTrigger>
           </TabsList>
           
           <TabsContent value="items" className="space-y-6">
@@ -453,7 +556,7 @@ const Library = () => {
                           <SelectValue placeholder="Tous les lots" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Tous les lots</SelectItem>
+                          <SelectItem value="">Tous les lots</SelectItem>
                           {categories.map(category => (
                             <SelectItem key={category} value={category}>{category}</SelectItem>
                           ))}
@@ -468,7 +571,7 @@ const Library = () => {
                           <SelectValue placeholder="Tous les types" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Tous les types</SelectItem>
+                          <SelectItem value="">Tous les types</SelectItem>
                           {uniqueTypes.map(type => (
                             <SelectItem key={type} value={type}>{type}</SelectItem>
                           ))}
@@ -483,7 +586,7 @@ const Library = () => {
                           <SelectValue placeholder="Toutes les unités" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Toutes les unités</SelectItem>
+                          <SelectItem value="">Toutes les unités</SelectItem>
                           {uniqueUnits.map(unit => (
                             <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                           ))}
@@ -501,7 +604,7 @@ const Library = () => {
                     <SelectValue placeholder="Lot" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tous les lots</SelectItem>
+                    <SelectItem value="">Tous les lots</SelectItem>
                     {categories.map(category => (
                       <SelectItem key={category} value={category}>{category}</SelectItem>
                     ))}
@@ -513,7 +616,7 @@ const Library = () => {
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tous les types</SelectItem>
+                    <SelectItem value="">Tous les types</SelectItem>
                     {uniqueTypes.map(type => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
@@ -525,7 +628,7 @@ const Library = () => {
                     <SelectValue placeholder="Unité" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Toutes les unités</SelectItem>
+                    <SelectItem value="">Toutes les unités</SelectItem>
                     {uniqueUnits.map(unit => (
                       <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                     ))}
@@ -554,17 +657,17 @@ const Library = () => {
                       <TableRow key={item.id} className="group transition-colors hover:bg-gray-50">
                         <TableCell>
                           <div className="flex items-center">
-                            {item.name}
+                            {item.designation}
                             {item.isNew && (
                               <Badge className="ml-2 bg-green-100 text-green-800 border-green-200">Nouveau</Badge>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>{item.category}</TableCell>
+                        <TableCell>{item.lot}</TableCell>
                         <TableCell>{item.type}</TableCell>
-                        <TableCell>{item.unit}</TableCell>
-                        <TableCell className="text-right">{item.price.toFixed(2)} €</TableCell>
-                        <TableCell className="text-right">{item.lastUsed || '-'}</TableCell>
+                        <TableCell>{item.unite}</TableCell>
+                        <TableCell className="text-right">{item.prix_unitaire.toFixed(2)} €</TableCell>
+                        <TableCell className="text-right">{item.date_derniere_utilisation || '-'}</TableCell>
                         <TableCell>
                           <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button variant="ghost" size="icon" onClick={() => handleEditItem(item)}>

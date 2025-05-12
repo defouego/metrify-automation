@@ -17,7 +17,7 @@ interface Project extends DashboardProject {
   lastModified?: string;
 }
 
-// Update project status type
+// Update project status type to include 'archived'
 type ProjectStatus = 'active' | 'draft' | 'completed' | 'archived';
 
 // Sample projects data
