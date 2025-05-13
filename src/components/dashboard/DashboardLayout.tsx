@@ -4,31 +4,26 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { SidebarProvider } from '@/hooks/useSidebar';
 import ToggleMenuButton from '@/components/Bibliotheque/ToggleMenuButton';
-import { useSidebar } from '@/hooks/useSidebar';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 const DashboardLayoutInner = ({ children }: DashboardLayoutProps) => {
-  const { isOpen } = useSidebar();
-
   return (
     <div className="min-h-screen bg-metrGray flex">
       {/* Sidebar */}
-      <div className={`transition-all duration-300 ${isOpen ? 'w-64' : 'w-0'}`}>
-        <Sidebar />
-      </div>
+      <Sidebar />
       
       {/* Main content */}
       <div className="flex-1 flex flex-col relative">
-        {/* Toggle Sidebar Button */}
-        <div className="absolute left-0 top-4 ml-4 z-10">
-          <ToggleMenuButton />
-        </div>
-        
         {/* Top Navigation Bar */}
         <Topbar />
+        
+        {/* Toggle Sidebar Button - Positioned under the top bar */}
+        <div className="absolute left-0 top-16 ml-4 z-10">
+          <ToggleMenuButton />
+        </div>
         
         {/* Main Content Area */}
         <main className="flex-1 px-6 py-8 overflow-y-auto">

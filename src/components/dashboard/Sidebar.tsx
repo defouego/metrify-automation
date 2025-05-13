@@ -4,7 +4,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FolderKanban, BookOpen, HelpCircle, Settings, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/hooks/useSidebar';
-import ToggleMenuButton from '@/components/Bibliotheque/ToggleMenuButton';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -48,11 +47,6 @@ const Sidebar = () => {
       "h-screen bg-metrBlue text-white flex flex-col transition-all duration-300 relative",
       isOpen ? "w-64" : "w-20"
     )}>
-      {/* Toggle Button */}
-      <div className="relative">
-        <ToggleMenuButton />
-      </div>
-      
       {/* Logo */}
       <div className={cn(
         "flex items-center justify-center h-20 border-b border-white/10",
@@ -61,7 +55,7 @@ const Sidebar = () => {
         {isOpen ? (
           <div className="text-2xl font-bold">Metr<span className="text-metrOrange">.</span></div>
         ) : (
-          <div className="text-2xl font-bold">M.</div>
+          <div className="text-2xl font-bold">M<span className="text-metrOrange">.</span></div>
         )}
       </div>
       

@@ -11,7 +11,7 @@ const ToggleMenuButton: React.FC = () => {
     <Button
       variant="outline"
       size="icon"
-      className="absolute top-1/2 -right-4 h-8 w-8 rounded-full transform -translate-y-1/2 bg-white border border-gray-200 shadow-sm"
+      className="h-8 w-8 rounded-full bg-white border border-gray-200 shadow-sm"
       onClick={toggle}
       aria-label={isOpen ? "Fermer le menu" : "Ouvrir le menu"}
     >
