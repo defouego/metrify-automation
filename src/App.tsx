@@ -10,9 +10,7 @@ import Projects from "./pages/Projects";
 import Library from "./pages/Library";
 import NewProject from "./pages/NewProject";
 import NotFound from "./pages/NotFound";
-
-// A placeholder component for future implementation
-const ProjectView = () => <div>Project View</div>;
+import ProjectView from "./pages/ProjectView";
 
 const queryClient = new QueryClient();
 

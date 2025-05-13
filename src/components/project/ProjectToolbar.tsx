@@ -1,0 +1,124 @@
+
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { 
+  MousePointer, 
+  ZoomIn, 
+  ZoomOut, 
+  Maximize2, 
+  Save, 
+  History, 
+  Settings 
+} from 'lucide-react';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+type Tool = 'select' | 'zoomIn' | 'zoomOut' | 'fullscreen' | 'calibrate';
+
+const ProjectToolbar = () => {
+  const [activeTool, setActiveTool] = useState<Tool>('select');
+  
+  const handleToolClick = (tool: Tool) => {
+    setActiveTool(tool);
+  };
+  
+  return (
+    <div className="w-full h-14 bg-white border-b border-gray-200 flex items-center px-4 justify-between shadow-sm">
+      <div className="flex items-center space-x-2">
+        <ToolButton 
+          icon={MousePointer} 
+          tooltip="Sélection"
+          isActive={activeTool === 'select'} 
+          onClick={() => handleToolClick('select')} 
+        />
+        <ToolButton 
+          icon={ZoomIn} 
+          tooltip="Zoom +"
+          isActive={activeTool === 'zoomIn'} 
+          onClick={() => handleToolClick('zoomIn')} 
+        />
+        <ToolButton 
+          icon={ZoomOut} 
+          tooltip="Zoom -"
+          isActive={activeTool === 'zoomOut'} 
+          onClick={() => handleToolClick('zoomOut')} 
+        />
+        <ToolButton 
+          icon={Maximize2} 
+          tooltip="Plein écran"
+          isActive={activeTool === 'fullscreen'} 
+          onClick={() => handleToolClick('fullscreen')} 
+        />
+        <Button 
+          variant="outline" 
+          className={cn(
+            "border border-gray-200 text-sm font-medium",
+            activeTool === 'calibrate' && "bg-accent text-accent-foreground"
+          )}
+          onClick={() => handleToolClick('calibrate')}
+        >
+          Calibrer
+        </Button>
+      </div>
+      
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="border border-gray-200">
+            <Settings className="mr-2 h-4 w-4" />
+            Menu
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem>
+            <Save className="mr-2 h-4 w-4" />
+            Sauvegarder
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <History className="mr-2 h-4 w-4" />
+            Historique des versions
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Settings className="mr-2 h-4 w-4" />
+            Gestion de projet
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+};
+
+interface ToolButtonProps {
+  icon: React.FC<{ className?: string }>;
+  tooltip: string;
+  isActive: boolean;
+  onClick: () => void;
+}
+
+const ToolButton = ({ icon: Icon, tooltip, isActive, onClick }: ToolButtonProps) => {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className={cn(
+            "border border-gray-200",
+            isActive && "bg-accent text-accent-foreground"
+          )}
+          onClick={onClick}
+        >
+          <Icon className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+};
+
+export default ProjectToolbar;
