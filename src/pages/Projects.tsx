@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Search, Filter, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -94,7 +95,7 @@ const Projects = () => {
 
       // Status filter
       if (statusFilter !== 'Tous') {
-        const statusMap: Record<string, ProjectStatus> = {
+        const statusMap: Record<string, 'active' | 'draft' | 'completed' | 'archived'> = {
           'En cours': 'active',
           'Brouillon': 'draft',
           'Terminé': 'completed',
