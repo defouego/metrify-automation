@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ItemUnit } from '@/types/library';
 
 // Types for the item form
-const itemFormSchema = z.object({
+export const itemFormSchema = z.object({
   designation: z.string().min(3, "La désignation doit contenir au moins 3 caractères"),
   lot: z.string().min(1, "Veuillez sélectionner un lot"),
   subCategory: z.string().optional(),

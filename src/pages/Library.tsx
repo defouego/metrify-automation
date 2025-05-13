@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Upload, Search, Filter } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -7,14 +6,12 @@ import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LibraryItem, ItemUnit, Library } from '@/types/library';
+import { LibraryItem, ItemUnit, type Library as LibraryType } from '@/types/library';
 import BibliothequeFilter from '@/components/Bibliotheque/BibliothequeFilter';
 import BibliothequeTable from '@/components/Bibliotheque/BibliothequeTable';
-import CreateArticleDialog from '@/components/Bibliotheque/CreateArticleDialog';
+import CreateArticleDialog, { ItemFormValues, itemFormSchema } from '@/components/Bibliotheque/CreateArticleDialog';
 import ImportExcelModal from '@/components/Bibliotheque/ImportExcelModal';
 import LoadBibliothequeModal from '@/components/Bibliotheque/LoadBibliothequeModal';
-import { ItemFormValues } from '@/components/Bibliotheque/CreateArticleDialog';
-import { Link } from 'react-router-dom';
 import CreateProjectButton from '@/components/Bibliotheque/CreateProjectButton';
 
 // Sample data
@@ -90,7 +87,7 @@ const sampleItems: LibraryItem[] = [
 ];
 
 // Sample libraries
-const sampleLibraries: Library[] = [
+const sampleLibraries: LibraryType[] = [
   {
     id: 'default',
     name: 'Bibliothèque par défaut',
@@ -156,7 +153,7 @@ const units = [
 
 const Library = () => {
   const [items, setItems] = useState<LibraryItem[]>(sampleItems);
-  const [libraries, setLibraries] = useState<Library[]>(sampleLibraries);
+  const [libraries, setLibraries] = useState<LibraryType[]>(sampleLibraries);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -172,7 +169,7 @@ const Library = () => {
   
   // Initialize form
   const form = useForm<ItemFormValues>({
-    resolver: zodResolver(CreateArticleDialog.itemFormSchema),
+    resolver: zodResolver(itemFormSchema),
     defaultValues: {
       designation: '',
       lot: '',
@@ -324,7 +321,7 @@ const Library = () => {
     const today = new Date();
     const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
     
-    const newLibrary: Library = {
+    const newLibrary: LibraryType = {
       id: libraryId,
       name: name,
       createdAt: formattedDate,
