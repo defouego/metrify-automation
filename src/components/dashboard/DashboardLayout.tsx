@@ -11,7 +11,7 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayoutInner = ({ children }: DashboardLayoutProps) => {
-  const { isOpen, toggle } = useSidebar();
+  const { isOpen } = useSidebar();
 
   return (
     <div className="min-h-screen bg-metrGray flex">
@@ -24,7 +24,7 @@ const DashboardLayoutInner = ({ children }: DashboardLayoutProps) => {
       <div className="flex-1 flex flex-col relative">
         {/* Toggle Sidebar Button */}
         <div className="absolute left-0 top-4 ml-4 z-10">
-          <ToggleMenuButton isSidebarOpen={isOpen} toggleSidebar={toggle} />
+          <ToggleMenuButton />
         </div>
         
         {/* Top Navigation Bar */}
