@@ -12,7 +12,7 @@ export interface Project {
   name: string;
   client: string;
   date: string;
-  status: 'draft' | 'active' | 'completed';
+  status: 'draft' | 'active' | 'completed' | 'archived';
 }
 
 const Dashboard = () => {

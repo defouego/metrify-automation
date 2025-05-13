@@ -20,13 +20,15 @@ const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
   const statusColors = {
     active: 'bg-green-100 text-green-800',
     draft: 'bg-amber-100 text-amber-800',
-    completed: 'bg-blue-100 text-blue-800'
+    completed: 'bg-blue-100 text-blue-800',
+    archived: 'bg-gray-100 text-gray-800'
   };
 
   const statusLabels = {
     active: 'En cours',
     draft: 'Brouillon',
-    completed: 'Terminé'
+    completed: 'Terminé',
+    archived: 'Archivé'
   };
 
   return (

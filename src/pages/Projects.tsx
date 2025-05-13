@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, Filter, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -12,13 +11,9 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import ProjectCard from '@/components/dashboard/ProjectCard';
 import { Project as DashboardProject } from '@/pages/Dashboard';
 
-// Updated ProjectStatus type to include 'archived'
-type ProjectStatus = 'active' | 'draft' | 'completed' | 'archived';
-
 // Extended Project type with lastModified
 interface Project extends DashboardProject {
   lastModified?: string;
-  status: ProjectStatus; // Override with our extended status type
 }
 
 // Sample projects data
