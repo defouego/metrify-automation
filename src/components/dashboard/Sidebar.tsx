@@ -1,12 +1,14 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, BookOpen, HelpCircle, Settings, ChevronLeft, ChevronRight, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, BookOpen, HelpCircle, Settings, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSidebar } from '@/hooks/useSidebar';
+import ToggleMenuButton from '@/components/Bibliotheque/ToggleMenuButton';
 
 const Sidebar = () => {
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
+  const { isOpen } = useSidebar();
   
   const menuItems = [
     { 
@@ -43,18 +45,23 @@ const Sidebar = () => {
 
   return (
     <aside className={cn(
-      "h-screen bg-metrBlue text-white flex flex-col transition-all duration-300",
-      collapsed ? "w-20" : "w-64"
+      "h-screen bg-metrBlue text-white flex flex-col transition-all duration-300 relative",
+      isOpen ? "w-64" : "w-20"
     )}>
+      {/* Toggle Button */}
+      <div className="relative">
+        <ToggleMenuButton />
+      </div>
+      
       {/* Logo */}
       <div className={cn(
         "flex items-center justify-center h-20 border-b border-white/10",
-        collapsed ? "px-2" : "px-4"
+        isOpen ? "px-4" : "px-2"
       )}>
-        {collapsed ? (
-          <div className="text-2xl font-bold">M.</div>
-        ) : (
+        {isOpen ? (
           <div className="text-2xl font-bold">Metr<span className="text-metrOrange">.</span></div>
+        ) : (
+          <div className="text-2xl font-bold">M.</div>
         )}
       </div>
       
@@ -70,11 +77,11 @@ const Sidebar = () => {
                 item.active 
                   ? "bg-white/10 text-white" 
                   : "text-white/70 hover:bg-white/5 hover:text-white",
-                collapsed ? "justify-center" : ""
+                !isOpen ? "justify-center" : ""
               )}
             >
-              <item.icon className={cn("h-5 w-5", collapsed ? "" : "mr-3")} />
-              {!collapsed && <span>{item.label}</span>}
+              <item.icon className={cn("h-5 w-5", !isOpen ? "" : "mr-3")} />
+              {isOpen && <span>{item.label}</span>}
             </Link>
           ))}
         </nav>
@@ -83,20 +90,20 @@ const Sidebar = () => {
       {/* User Profile */}
       <div className={cn(
         "p-4 border-t border-white/10",
-        collapsed ? "items-center justify-center" : ""
+        !isOpen ? "items-center justify-center" : ""
       )}>
         <div className={cn(
           "flex items-center",
-          collapsed ? "justify-center" : "justify-between"
+          !isOpen ? "justify-center" : "justify-between"
         )}>
           <div className={cn(
             "flex items-center",
-            collapsed ? "justify-center" : ""
+            !isOpen ? "justify-center" : ""
           )}>
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
               <User className="h-5 w-5" />
             </div>
-            {!collapsed && (
+            {isOpen && (
               <div className="ml-3">
                 <div className="text-sm font-medium">John Doe</div>
                 <div className="text-xs text-white/60">Admin</div>
@@ -104,25 +111,13 @@ const Sidebar = () => {
             )}
           </div>
           
-          {!collapsed && (
+          {isOpen && (
             <button className="rounded-full p-1 hover:bg-white/10">
               <LogOut className="h-4 w-4" />
             </button>
           )}
         </div>
       </div>
-      
-      {/* Collapse button */}
-      <button 
-        className="absolute top-[calc(50%-20px)] -right-4 h-8 w-8 bg-metrBlue text-white rounded-full flex items-center justify-center shadow-md border border-white/10"
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        {collapsed ? (
-          <ChevronRight className="h-4 w-4" />
-        ) : (
-          <ChevronLeft className="h-4 w-4" />
-        )}
-      </button>
     </aside>
   );
 };
