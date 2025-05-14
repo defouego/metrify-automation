@@ -1,13 +1,23 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useCalibration } from '@/hooks/useCalibration';
+import CalibrationToolbar from '@/components/project/CalibrationToolbar';
+import { ElementType } from '@/types/project';
+import { toast } from 'sonner';
 
 interface PlanViewerProps {
   projectId?: string;
+  isCalibrating: boolean;
 }
 
-const PlanViewer = ({ projectId }: PlanViewerProps) => {
+const PlanViewer = ({ projectId, isCalibrating }: PlanViewerProps) => {
   const [scale, setScale] = useState(1);
+  const { 
+    calibrationStep, 
+    addCalibrationPoint, 
+    currentElementType 
+  } = useCalibration();
   
   // Mock function to represent what would be done by the external plan rendering service
   const renderPlan = () => {
@@ -31,11 +41,28 @@ const PlanViewer = ({ projectId }: PlanViewerProps) => {
     );
   };
 
+  // Handle click on the plan during calibration
+  const handlePlanClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isCalibrating || calibrationStep !== 2) return;
+    
+    // Get click coordinates relative to the plan viewer
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Add calibration point
+    addCalibrationPoint(x, y);
+    toast.success(`Élément ${currentElementType} ajouté à la position (${Math.round(x)}, ${Math.round(y)})`);
+  };
+
   return (
-    <div className={cn(
-      "flex-1 relative overflow-hidden", 
-      "bg-gray-100"
-    )}>
+    <div 
+      className={cn(
+        "flex-1 relative overflow-hidden", 
+        "bg-white" // Changed from gray-100 to white for better color consistency
+      )}
+      onClick={handlePlanClick}
+    >
       {renderPlan()}
       
       {/* Tooltip de démonstration */}
@@ -58,6 +85,11 @@ const PlanViewer = ({ projectId }: PlanViewerProps) => {
         className="absolute right-1/3 top-2/3 w-16 h-32 border-2 border-yellow-500 bg-yellow-100/20 
                   rounded-sm pointer-events-none"
       ></div>
+      
+      {/* Calibration toolbar that appears at the bottom during calibration */}
+      {isCalibrating && calibrationStep === 2 && (
+        <CalibrationToolbar elementType={currentElementType} />
+      )}
     </div>
   );
 };

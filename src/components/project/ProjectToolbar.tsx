@@ -29,11 +29,19 @@ import { Separator } from '@/components/ui/separator';
 
 type Tool = 'select' | 'zoomIn' | 'zoomOut' | 'fullscreen' | 'calibrate' | 'measure' | 'draw' | 'erase' | 'move';
 
-const ProjectToolbar = () => {
+interface ProjectToolbarProps {
+  onCalibrationStart?: () => void;
+}
+
+const ProjectToolbar = ({ onCalibrationStart }: ProjectToolbarProps) => {
   const [activeTool, setActiveTool] = useState<Tool>('select');
   
   const handleToolClick = (tool: Tool) => {
     setActiveTool(tool);
+    
+    if (tool === 'calibrate' && onCalibrationStart) {
+      onCalibrationStart();
+    }
   };
   
   return (
@@ -104,7 +112,7 @@ const ProjectToolbar = () => {
           variant="outline" 
           className={cn(
             "border border-gray-200 text-sm font-medium",
-            activeTool === 'calibrate' && "bg-accent text-accent-foreground"
+            activeTool === 'calibrate' && "bg-blue-50 text-blue-700 border-blue-200"
           )}
           onClick={() => handleToolClick('calibrate')}
         >
@@ -166,7 +174,7 @@ const ToolButton = ({ icon: Icon, tooltip, isActive, onClick }: ToolButtonProps)
           size="icon"
           className={cn(
             "border border-gray-200",
-            isActive && "bg-accent text-accent-foreground"
+            isActive && "bg-blue-50 text-blue-700 border-blue-200"
           )}
           onClick={onClick}
         >

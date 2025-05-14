@@ -1,33 +1,10 @@
 
-export type ElementType = 'Mur' | 'Fenêtre' | 'Porte' | 'Sol' | 'Plafond' | 'HSP' | 'HSD';
+// Types used throughout the project
 
-export interface OuvrageItem {
-  id: string;
-  designation: string;
-  lot: string;
-  unite: string;
-  prix: number;
-}
+// Element types that can be calibrated
+export type ElementType = 'door' | 'window' | 'wall' | 'room';
 
-export interface OuvrageCategory {
-  id: string;
-  categorie: string;
-  items: OuvrageItem[];
-}
-
-export interface ElementAssociation {
-  id: string;
-  elementType: ElementType;
-  elementId: string;
-  ouvrage: {
-    designation: string;
-    unite: string;
-    prix: number;
-  };
-  quantite: number;
-  dimension: string;
-}
-
+// Calibration point representing an element on the plan
 export interface CalibrationPoint {
   type: ElementType;
   x: number;
@@ -37,4 +14,21 @@ export interface CalibrationPoint {
     height?: number;
     length?: number;
   };
+}
+
+// Project settings
+export interface ProjectSettings {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// User profile
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  company?: string;
+  role?: string;
 }

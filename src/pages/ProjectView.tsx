@@ -1,20 +1,32 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { CalibrationStep, Element, Plan, Projet, Surface } from '@/types/metr';
+import { Element, Plan, Projet, Surface } from '@/types/metr';
 import Header from '@/components/project/Header';
 import LeftPanel from '@/components/project/LeftPanel';
 import CentralPanel from '@/components/project/CentralPanel';
 import RightPanel from '@/components/project/RightPanel';
 import NewProjectModal from '@/components/project/NewProjectModal';
+import ProjectToolbar from '@/components/project/ProjectToolbar';
+import ProjectLayout from '@/components/project/ProjectLayout';
+import { useCalibration } from '@/hooks/useCalibration';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import CalibrationGuide from '@/components/project/CalibrationGuide';
 
 const ProjectView = () => {
   const { id } = useParams();
   const [projet, setProjet] = useState<Projet | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
-  const [calibrationStep, setCalibrationStep] = useState<CalibrationStep>('upload');
   const [selectedSurface, setSelectedSurface] = useState<Surface | null>(null);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [hoveredElementId, setHoveredElementId] = useState<string | null>(null);
+
+  // Access calibration state from the hook
+  const { 
+    isCalibrating, 
+    calibrationStep,
+    startCalibration
+  } = useCalibration();
 
   // Initialize project data (this would come from API in a real app)
   useEffect(() => {
@@ -42,6 +54,11 @@ const ProjectView = () => {
     };
     setProjet(newProjet);
     setIsNewProjectModalOpen(false);
+  };
+
+  // Handle calibration start
+  const handleStartCalibration = () => {
+    startCalibration();
   };
 
   // Add a new plan to the project
@@ -136,7 +153,6 @@ const ProjectView = () => {
 
   // Handle calibration completion
   const handleCalibrationComplete = () => {
-    // This would typically prepare the project for measurements
     console.log('Calibration complete');
   };
 
@@ -144,12 +160,17 @@ const ProjectView = () => {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
 
+  // Determine if side panels should be hidden during calibration
+  const hidePanels = isCalibrating && calibrationStep > 0;
+
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <ProjectLayout>
       <Header projet={projet} onNewProject={() => setIsNewProjectModalOpen(true)} />
+      <ProjectToolbar onCalibrationStart={handleStartCalibration} />
       
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-72 border-r">
+        {/* Left panel - hidden during calibration */}
+        <div className={`w-72 border-r transition-all duration-300 ${hidePanels ? 'hidden' : 'block'}`}>
           <LeftPanel 
             projet={projet}
             selectedSurface={selectedSurface}
@@ -158,20 +179,24 @@ const ProjectView = () => {
           />
         </div>
         
-        <CentralPanel 
-          projet={projet}
-          plan={plan}
-          setPlan={setPlan}
-          calibrationStep={calibrationStep}
-          setCalibrationStep={setCalibrationStep}
-          onPlanUploaded={handlePlanUploaded}
-          onCalibrationComplete={handleCalibrationComplete}
-          onElementSelected={handleElementSelected}
-          selectedSurface={selectedSurface}
-          hoveredElementId={hoveredElementId}
-        />
+        {/* Central panel - expands during calibration */}
+        <div className={`flex-1 transition-all duration-300 ${hidePanels ? 'w-full' : ''}`}>
+          <CentralPanel 
+            projet={projet}
+            plan={plan}
+            setPlan={setPlan}
+            isCalibrating={isCalibrating}
+            calibrationStep={calibrationStep}
+            onPlanUploaded={handlePlanUploaded}
+            onCalibrationComplete={handleCalibrationComplete}
+            onElementSelected={handleElementSelected}
+            selectedSurface={selectedSurface}
+            hoveredElementId={hoveredElementId}
+          />
+        </div>
         
-        <div className="w-80 border-l">
+        {/* Right panel - hidden during calibration */}
+        <div className={`w-80 border-l transition-all duration-300 ${hidePanels ? 'hidden' : 'block'}`}>
           <RightPanel 
             projet={projet}
             onElementHover={setHoveredElementId}
@@ -181,12 +206,19 @@ const ProjectView = () => {
         </div>
       </div>
       
+      {/* Calibration Dialog */}
+      <Dialog open={isCalibrating && calibrationStep === 1}>
+        <DialogContent className="p-0 border-0 max-w-xl">
+          <CalibrationGuide onClose={() => console.log('Close calibration guide')} />
+        </DialogContent>
+      </Dialog>
+      
       <NewProjectModal 
         isOpen={isNewProjectModalOpen}
         onClose={() => setIsNewProjectModalOpen(false)}
         onCreateProject={handleCreateProject}
       />
-    </div>
+    </ProjectLayout>
   );
 };
 
