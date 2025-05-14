@@ -29,7 +29,7 @@ export function useCalibration() {
   
   const beginCalibrationStep = useCallback(() => {
     console.log("Beginning calibration step, moving from step", calibrationStep, "to step 2");
-    setCalibrationStep(2); // Allow user to select elements on plan
+    setCalibrationStep(2); // Move to step 2: Allow user to select elements on plan
   }, [calibrationStep]);
   
   const addCalibrationPoint = useCallback((x: number, y: number) => {
