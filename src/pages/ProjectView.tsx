@@ -161,10 +161,7 @@ const ProjectView = () => {
     }
   };
 
-  // Handle calibration completion
-  const handleCalibrationComplete = () => {
-    console.log('Calibration complete');
-  };
+  // Removed the duplicate handleCalibrationComplete function that was here
 
   if (!projet) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
