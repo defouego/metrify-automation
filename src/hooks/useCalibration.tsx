@@ -99,8 +99,9 @@ export function useCalibration() {
   }, [currentStepIndex, calibrationSequence]);
   
   const cancelCalibration = useCallback(() => {
-    removeLastCalibrationPoint();
-  }, [removeLastCalibrationPoint]);
+    setCalibrationStep(1); // Retourner à l'écran d'instruction
+    console.log("Cancelling current selection and returning to instruction screen");
+  }, []);
   
   const getCurrentCalibrationStepName = useCallback(() => {
     switch (currentElementType) {

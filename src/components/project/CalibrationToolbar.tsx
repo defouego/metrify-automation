@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Eraser, Check } from 'lucide-react';
+import { Plus, Eraser, Check, Eye } from 'lucide-react';
 import { useCalibration } from '@/hooks/useCalibration';
 import { ElementType } from '@/types/project';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,7 @@ interface CalibrationToolbarProps {
 }
 
 const CalibrationToolbar = ({ elementType }: CalibrationToolbarProps) => {
-  const { completeCalibration, cancelCalibration } = useCalibration();
+  const { completeCalibration, cancelCalibration, removeLastCalibrationPoint } = useCalibration();
   
   return (
     <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 flex justify-between items-center">
@@ -38,27 +38,33 @@ const CalibrationToolbar = ({ elementType }: CalibrationToolbarProps) => {
           onClick={() => console.log('Add more elements')}
         >
           <Plus className="w-4 h-4" />
-          Ajouter un élément
         </Button>
         
         <Button
           variant="outline"
           size="sm"
           className="flex items-center gap-1 border-gray-300"
-          onClick={cancelCalibration}
+          onClick={removeLastCalibrationPoint}
         >
           <Eraser className="w-4 h-4" />
-          Effacer
+        </Button>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-1 border-gray-300"
+        >
+          <Eye className="w-4 h-4" />
         </Button>
         
         <Button
           variant="default"
           size="sm"
-          className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700" 
+          className="flex items-center gap-1 bg-orange-500 hover:bg-orange-600" 
           onClick={completeCalibration}
         >
           <Check className="w-4 h-4" />
-          Valider la calibration
+          Valider
         </Button>
       </div>
     </div>

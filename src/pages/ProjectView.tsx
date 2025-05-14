@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Element, Plan, Projet, Surface } from '@/types/metr';
@@ -161,8 +160,6 @@ const ProjectView = () => {
     }
   };
 
-  // Removed the duplicate handleCalibrationComplete function that was here
-
   if (!projet) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
@@ -213,7 +210,7 @@ const ProjectView = () => {
         </div>
       </div>
       
-      {/* Calibration Dialog */}
+      {/* Calibration Dialog - Only show for step 1 (instructions) */}
       <Dialog open={isCalibrating && calibrationStep === 1} onOpenChange={() => {}}>
         <DialogContent className="p-0 border-0 max-w-xl">
           <DialogTitle className="sr-only">Calibration Guide</DialogTitle>
