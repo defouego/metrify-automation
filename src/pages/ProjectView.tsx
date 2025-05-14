@@ -10,7 +10,7 @@ import NewProjectModal from '@/components/project/NewProjectModal';
 import ProjectToolbar from '@/components/project/ProjectToolbar';
 import ProjectLayout from '@/components/project/ProjectLayout';
 import { useCalibration } from '@/hooks/useCalibration';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import CalibrationGuide from '@/components/project/CalibrationGuide';
 
 const ProjectView = () => {
@@ -62,7 +62,7 @@ const ProjectView = () => {
   };
 
   // Add a new plan to the project
-  const handlePlanUploaded = (newPlan: Plan) => {
+  const handlePlanUploaded = async (newPlan: Plan) => {
     if (!projet) return;
     
     const updatedProjet = {
@@ -72,6 +72,16 @@ const ProjectView = () => {
     };
     
     setProjet(updatedProjet);
+    
+    // Auto-start calibration when a new plan is uploaded
+    setTimeout(() => {
+      startCalibration();
+    }, 500);
+  };
+
+  // Handle calibration completion
+  const handleCalibrationComplete = () => {
+    console.log('Calibration complete');
   };
 
   // Add new ouvrage to the project
@@ -209,6 +219,7 @@ const ProjectView = () => {
       {/* Calibration Dialog */}
       <Dialog open={isCalibrating && calibrationStep === 1} onOpenChange={() => {}}>
         <DialogContent className="p-0 border-0 max-w-xl">
+          <DialogTitle className="sr-only">Calibration Guide</DialogTitle>
           <CalibrationGuide onClose={() => console.log('Close calibration guide')} />
         </DialogContent>
       </Dialog>

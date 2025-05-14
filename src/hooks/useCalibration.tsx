@@ -24,11 +24,13 @@ export function useCalibration() {
     setCalibrationStep(1); // Show instructions
     setCurrentStepIndex(0);
     setCurrentElementType(calibrationSequence[0]);
+    console.log("Starting calibration");
   }, []);
   
   const beginCalibrationStep = useCallback(() => {
+    console.log("Beginning calibration step, moving from step", calibrationStep, "to step 2");
     setCalibrationStep(2); // Allow user to select elements on plan
-  }, []);
+  }, [calibrationStep]);
   
   const addCalibrationPoint = useCallback((x: number, y: number) => {
     if (!currentElementType) return;
@@ -42,11 +44,13 @@ export function useCalibration() {
         realDimension: {}
       }
     ]);
+    console.log("Added calibration point at", x, y, "for", currentElementType);
   }, [currentElementType]);
   
   const removeLastCalibrationPoint = useCallback(() => {
     setCalibrationPoints(prev => {
       if (prev.length === 0) return prev;
+      console.log("Removing last calibration point");
       return prev.slice(0, prev.length - 1);
     });
   }, []);
@@ -69,6 +73,7 @@ export function useCalibration() {
     });
     
     setCalibrationStep(4); // Move to review step
+    console.log("Set real dimensions and moved to review step");
   }, []);
   
   const completeCalibration = useCallback(() => {
@@ -81,6 +86,7 @@ export function useCalibration() {
       setCurrentElementType(calibrationSequence[nextStepIndex]);
       setCalibrationStep(1); // Show instructions again for next step
       toast.success(`Étape de calibration complétée! Passons à l'étape suivante.`);
+      console.log("Completed calibration for current element, moving to next step");
     } else {
       // Complete the whole calibration process
       setCalibrationStep(0);
@@ -88,6 +94,7 @@ export function useCalibration() {
       setCurrentElementType(null);
       setCurrentStepIndex(0);
       toast.success('Calibration terminée avec succès!');
+      console.log("Calibration fully completed");
     }
   }, [currentStepIndex, calibrationSequence]);
   

@@ -111,7 +111,7 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
 
           <div className="flex justify-end">
             <Button 
-              onClick={beginCalibrationStep}
+              onClick={() => beginCalibrationStep()}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Commencer l'identification
@@ -188,7 +188,7 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
         transition={{ delay: 0.6 }}
       >
         <Button 
-          onClick={beginCalibrationStep} 
+          onClick={() => beginCalibrationStep()} 
           className="w-full bg-blue-600 hover:bg-blue-700 transition-colors text-white"
           size="lg"
         >
