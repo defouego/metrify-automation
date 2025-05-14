@@ -112,7 +112,7 @@ const ProjectToolbar = ({ onCalibrationStart }: ProjectToolbarProps) => {
           variant="outline" 
           className={cn(
             "border border-gray-200 text-sm font-medium",
-            activeTool === 'calibrate' && "bg-blue-50 text-blue-700 border-blue-200"
+            activeTool === 'calibrate' && "bg-blue-50 text-blue-600 border-blue-200"
           )}
           onClick={() => handleToolClick('calibrate')}
         >
@@ -174,7 +174,7 @@ const ToolButton = ({ icon: Icon, tooltip, isActive, onClick }: ToolButtonProps)
           size="icon"
           className={cn(
             "border border-gray-200",
-            isActive && "bg-blue-50 text-blue-700 border-blue-200"
+            isActive && "bg-blue-50 text-blue-600 border-blue-200"
           )}
           onClick={onClick}
         >

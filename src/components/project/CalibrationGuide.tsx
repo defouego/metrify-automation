@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Hand, HandMetal, Check, ChevronRight } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useCalibration } from '@/hooks/useCalibration';
+import { cn } from "@/lib/utils";
 import { ElementType } from '@/types/project';
 
 interface CalibrationGuideProps {
@@ -245,8 +246,5 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
     return renderStepContent();
   }
 };
-
-// Import cn to fix the error
-import { cn } from "@/lib/utils";
 
 export default CalibrationGuide;

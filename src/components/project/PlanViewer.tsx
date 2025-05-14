@@ -59,7 +59,8 @@ const PlanViewer = ({ projectId, isCalibrating }: PlanViewerProps) => {
     <div 
       className={cn(
         "flex-1 relative overflow-hidden", 
-        "bg-white" // Changed from gray-100 to white for better color consistency
+        "bg-white", // Changed from gray-100 to white for better color consistency
+        isCalibrating && "cursor-crosshair"
       )}
       onClick={handlePlanClick}
     >

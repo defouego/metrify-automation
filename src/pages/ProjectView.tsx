@@ -207,7 +207,7 @@ const ProjectView = () => {
       </div>
       
       {/* Calibration Dialog */}
-      <Dialog open={isCalibrating && calibrationStep === 1}>
+      <Dialog open={isCalibrating && calibrationStep === 1} onOpenChange={() => {}}>
         <DialogContent className="p-0 border-0 max-w-xl">
           <CalibrationGuide onClose={() => console.log('Close calibration guide')} />
         </DialogContent>
