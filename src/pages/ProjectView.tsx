@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Element, Plan, Projet, Surface } from '@/types/metr';
@@ -121,6 +122,20 @@ const ProjectViewContent = () => {
     }
   };
 
+  // Edit an existing ouvrage
+  const handleEditOuvrage = (updatedOuvrage: any) => {
+    if (!projet) return;
+    
+    const updatedOuvrages = projet.ouvrages.map(ouvrage => 
+      ouvrage.id === updatedOuvrage.id ? updatedOuvrage : ouvrage
+    );
+    
+    setProjet({
+      ...projet,
+      ouvrages: updatedOuvrages,
+    });
+  };
+
   // Remove an ouvrage from the project
   const handleRemoveOuvrage = (ouvrageId: string) => {
     if (!projet) return;
@@ -170,6 +185,11 @@ const ProjectViewContent = () => {
     }
   };
 
+  // Handle element hover to highlight it on the plan
+  const handleElementHover = (elementId: string | null) => {
+    setHoveredElementId(elementId);
+  };
+
   if (!projet) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
@@ -209,11 +229,11 @@ const ProjectViewContent = () => {
           />
         </div>
         
-        {/* Right panel - hidden during calibration */}
-        <div className={`w-80 border-l transition-all duration-300 ${hidePanels ? 'hidden' : 'block'}`}>
+        {/* Right panel - hidden during calibration but resizable when visible */}
+        <div className={`transition-all duration-300 ${hidePanels ? 'hidden' : 'flex'}`}>
           <RightPanel 
             projet={projet}
-            onElementHover={setHoveredElementId}
+            onElementHover={handleElementHover}
             selectedSurface={selectedSurface}
             setSelectedSurface={setSelectedSurface}
             isCalibrating={isCalibrating}
