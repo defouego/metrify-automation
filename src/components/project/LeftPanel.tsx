@@ -91,7 +91,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
         {/* Project Ouvrages Tab */}
         <TabsContent value="ouvrages" className="h-[calc(100vh-120px)] overflow-auto">
           <div className="p-2">
-            <h2 className="text-lg font-semibold mb-2 text-primary">Ouvrages du projet</h2>
+            <h2 className="w-full text-center text-lg font-semibold mb-2 text-primary">Ouvrages du projet</h2>
             
             {selectedSurface && (
               <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
