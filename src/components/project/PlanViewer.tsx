@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useCalibrationContext } from '@/contexts/CalibrationContext';
@@ -9,10 +8,9 @@ import { toast } from 'sonner';
 interface PlanViewerProps {
   projectId?: string;
   isCalibrating: boolean;
-  hoveredElementId?: string | null;
 }
 
-const PlanViewer = ({ projectId, isCalibrating, hoveredElementId }: PlanViewerProps) => {
+const PlanViewer = ({ projectId, isCalibrating }: PlanViewerProps) => {
   const [scale, setScale] = useState(1);
   const { 
     calibrationStep, 
@@ -80,19 +78,13 @@ const PlanViewer = ({ projectId, isCalibrating, hoveredElementId }: PlanViewerPr
       
       {/* Éléments de sélection de démonstration */}
       <div 
-        className={cn(
-          "absolute left-1/3 top-1/2 w-24 h-24 border-2 border-blue-500 rounded-sm pointer-events-none transition-all duration-200",
-          hoveredElementId === "element-1" ? "bg-blue-300/50" : "bg-blue-100/20"
-        )}
-        data-element-id="element-1"
+        className="absolute left-1/3 top-1/2 w-24 h-24 border-2 border-blue-500 bg-blue-100/20 
+                  rounded-sm pointer-events-none"
       ></div>
       
       <div 
-        className={cn(
-          "absolute right-1/3 top-2/3 w-16 h-32 border-2 border-yellow-500 rounded-sm pointer-events-none transition-all duration-200",
-          hoveredElementId === "element-2" ? "bg-yellow-300/50" : "bg-yellow-100/20"
-        )}
-        data-element-id="element-2"
+        className="absolute right-1/3 top-2/3 w-16 h-32 border-2 border-yellow-500 bg-yellow-100/20 
+                  rounded-sm pointer-events-none"
       ></div>
       
       {/* Calibration toolbar that appears at the bottom during calibration */}
