@@ -11,6 +11,13 @@ import BibliothequeTable from '@/components/Bibliotheque/BibliothequeTable';
 import CreateArticleDialog, { ItemFormValues, itemFormSchema } from '@/components/Bibliotheque/CreateArticleDialog';
 import ImportBibliothequeModal from '@/components/Bibliotheque/ImportBibliothequeModal';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -25,6 +32,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { Input } from '@/components/ui/input';
 
 // Sample data
 const sampleItems: LibraryItem[] = [
@@ -184,6 +192,8 @@ const Library = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isNewLibraryDialogOpen, setIsNewLibraryDialogOpen] = useState(false);
+  const [newLibraryName, setNewLibraryName] = useState('');
   const { toast } = useToast();
   
   // Initialize form
@@ -235,7 +245,6 @@ const Library = () => {
     const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
     
     if (isEditMode && currentItemId) {
-      // Update existing item
       setItems(items.map(item => 
         item.id === currentItemId ? {
           ...item,
@@ -256,7 +265,6 @@ const Library = () => {
         description: "L'article a été modifié avec succès",
       });
     } else {
-      // Add new item - make sure all required fields are set
       const newItem: LibraryItem = {
         id: Date.now().toString(),
         designation: values.designation,
@@ -327,7 +335,6 @@ const Library = () => {
         isNew: true
       }));
       
-      // Add new items to the existing ones
       setItems([...newItems, ...items]);
       
       toast({
@@ -335,6 +342,39 @@ const Library = () => {
         description: `${data.items.length} articles importés avec succès`,
       });
     }
+  };
+  
+  // Handle creating a new library
+  const handleCreateNewLibrary = () => {
+    if (!newLibraryName.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Le nom de la bibliothèque ne peut pas être vide",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const today = new Date();
+    const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+    
+    const libraryId = newLibraryName.replace(/\s+/g, '_').toLowerCase();
+    const newLibrary: LibraryType = {
+      id: libraryId,
+      name: newLibraryName,
+      createdAt: formattedDate,
+      itemCount: 0
+    };
+    
+    setLibraries([...libraries, newLibrary]);
+    setSelectedLibrary(libraryId);
+    setIsNewLibraryDialogOpen(false);
+    setNewLibraryName('');
+    
+    toast({
+      title: "Bibliothèque créée",
+      description: `La bibliothèque "${newLibraryName}" a été créée avec succès`
+    });
   };
   
   // Filter items based on search and filters
@@ -420,22 +460,31 @@ const Library = () => {
         </div>
         
         {/* Library super-filter */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Bibliothèque
-          </label>
-          <Select value={selectedLibrary} onValueChange={handleChangeLibrary}>
-            <SelectTrigger className="w-full md:w-[300px]">
-              <SelectValue placeholder="Sélectionner une bibliothèque" />
-            </SelectTrigger>
-            <SelectContent>
-              {libraries.map(library => (
-                <SelectItem key={library.id} value={library.id}>
-                  {library.name} ({library.itemCount} articles)
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="mb-6 flex items-center gap-2">
+          <div className="flex-1 md:flex-initial md:w-[300px]">
+            <Select value={selectedLibrary} onValueChange={handleChangeLibrary}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner une bibliothèque" />
+              </SelectTrigger>
+              <SelectContent>
+                {libraries.map(library => (
+                  <SelectItem key={library.id} value={library.id}>
+                    {library.name} ({library.itemCount} articles)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="flex-shrink-0"
+            onClick={() => setIsNewLibraryDialogOpen(true)}
+            title="Créer une nouvelle bibliothèque"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="sr-only">Créer une bibliothèque</span>
+          </Button>
         </div>
         
         {/* Search and filters row */}
@@ -563,6 +612,35 @@ const Library = () => {
           onOpenChange={setIsImportDialogOpen}
           onImportConfirm={handleImportConfirm}
         />
+
+        {/* New Library Dialog */}
+        <Dialog open={isNewLibraryDialogOpen} onOpenChange={setIsNewLibraryDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Créer une nouvelle bibliothèque</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <label htmlFor="library-name" className="block text-sm font-medium mb-2">
+                Nom de la bibliothèque
+              </label>
+              <Input
+                id="library-name"
+                value={newLibraryName}
+                onChange={(e) => setNewLibraryName(e.target.value)}
+                placeholder="Ex: Batiment Standard 2025"
+                className="w-full"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsNewLibraryDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={handleCreateNewLibrary}>
+                Créer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

@@ -10,6 +10,13 @@ import {
   AccordionTrigger
 } from "@/components/ui/accordion";
 import { Search, Filter, Plus } from 'lucide-react';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 
 interface LeftPanelProps {
   projet: Projet;
@@ -21,6 +28,9 @@ interface LeftPanelProps {
 const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuvrage, onRemoveOuvrage }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLot, setSelectedLot] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
+  const [selectedLibrary, setSelectedLibrary] = useState('all');
   
   // Sample ouvrages library for demonstration
   const ouvragesLibrary: Omit<Ouvrage, 'id' | 'localisation'>[] = [
@@ -32,14 +42,30 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
     { designation: "Pose fenêtre double vitrage", lot: "Menuiseries", quantite: 0, unite: "u", prix_unitaire: 350 }
   ];
   
+  // Sample libraries for demonstration
+  const libraries = [
+    { id: 'all', name: 'Tous les articles', itemCount: ouvragesLibrary.length },
+    { id: 'default', name: 'Bibliothèque par défaut', itemCount: 3 },
+    { id: 'ATTIC+', name: 'ATTIC+', itemCount: 1 },
+    { id: 'BatiMat 2023', name: 'BatiMat 2023', itemCount: 2 }
+  ];
+  
   // Get unique lots from the library
   const uniqueLots = [...new Set(ouvragesLibrary.map(o => o.lot))];
   
-  // Filter ouvrages based on search term and selected lot
+  // Get unique types from the library
+  const uniqueTypes = [...new Set(ouvragesLibrary.map(o => o.type || ''))].filter(Boolean);
+  
+  // Get unique units from the library
+  const uniqueUnits = [...new Set(ouvragesLibrary.map(o => o.unite))];
+  
+  // Filter ouvrages based on search term and selected filters
   const filteredOuvrages = ouvragesLibrary.filter(ouvrage => {
     const matchesSearch = ouvrage.designation.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLot = selectedLot ? ouvrage.lot === selectedLot : true;
-    return matchesSearch && matchesLot;
+    const matchesType = selectedType ? ouvrage.type === selectedType : true;
+    const matchesUnit = selectedUnit ? ouvrage.unite === selectedUnit : true;
+    return matchesSearch && matchesLot && matchesType && matchesUnit;
   });
   
   // Add an ouvrage to the project
@@ -159,6 +185,22 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
         {/* Library Tab */}
         <TabsContent value="bibliotheque" className="h-[calc(100vh-120px)] overflow-auto">
           <div className="p-2 space-y-4">
+            {/* Library selector */}
+            <div className="mb-2">
+              <Select value={selectedLibrary} onValueChange={setSelectedLibrary}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sélectionner une bibliothèque" />
+                </SelectTrigger>
+                <SelectContent>
+                  {libraries.map(library => (
+                    <SelectItem key={library.id} value={library.id}>
+                      {library.name} ({library.itemCount} articles)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
               <Input
@@ -169,19 +211,54 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
               />
             </div>
             
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-500">Filtrer par lot:</span>
-              <select 
-                className="text-sm border rounded p-1"
-                value={selectedLot || ''}
-                onChange={(e) => setSelectedLot(e.target.value || null)}
+            <div className="flex flex-wrap gap-2">
+              {/* Lot filter */}
+              <Select 
+                value={selectedLot || ''} 
+                onValueChange={(value) => setSelectedLot(value || null)}
               >
-                <option value="">Tous</option>
-                {uniqueLots.map(lot => (
-                  <option key={lot} value={lot}>{lot}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full md:w-auto">
+                  <SelectValue placeholder="Lot" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tous les lots</SelectItem>
+                  {uniqueLots.map(lot => (
+                    <SelectItem key={lot} value={lot}>{lot}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Type filter */}
+              <Select 
+                value={selectedType || ''} 
+                onValueChange={(value) => setSelectedType(value || null)}
+              >
+                <SelectTrigger className="w-full md:w-auto">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tous les types</SelectItem>
+                  {uniqueTypes.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Unit filter */}
+              <Select 
+                value={selectedUnit || ''} 
+                onValueChange={(value) => setSelectedUnit(value || null)}
+              >
+                <SelectTrigger className="w-full md:w-auto">
+                  <SelectValue placeholder="Unité" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Toutes les unités</SelectItem>
+                  {uniqueUnits.map(unit => (
+                    <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">
@@ -216,4 +293,4 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   );
 };
 
-export default LeftPanel; 
+export default LeftPanel;
