@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { CalibrationPoint, ElementType } from '@/types/project';
 import { toast } from 'sonner';
@@ -27,10 +26,45 @@ export function useCalibration() {
     console.log("Starting calibration");
   }, []);
   
+  const completeCalibration = useCallback(() => {
+    // Move to the next element type in the sequence
+    const nextStepIndex = currentStepIndex + 1;
+    
+    if (nextStepIndex < calibrationSequence.length) {
+      // Go to the next calibration step
+      setCurrentStepIndex(nextStepIndex);
+      setCurrentElementType(calibrationSequence[nextStepIndex]);
+      setCalibrationStep(1); // Show instructions again for next step
+      toast.success(`Étape de calibration complétée! Passons à l'étape suivante.`);
+      console.log("Completed calibration for current element, moving to next step");
+    } else {
+      // Complete the whole calibration process
+      setCalibrationStep(0);
+      setIsCalibrating(false);
+      setCurrentElementType(null);
+      setCurrentStepIndex(0);
+      toast.success('Calibration terminée avec succès!');
+      console.log("Calibration fully completed");
+    }
+  }, [currentStepIndex, calibrationSequence]);
+  
   const beginCalibrationStep = useCallback(() => {
-    console.log("Beginning calibration step, moving from step", calibrationStep, "to step 2");
-    setCalibrationStep(2); // Move to step 2: Allow user to select elements on plan
-  }, [calibrationStep]);
+    // Si nous sommes à l'étape 0 (pré-calibration) ou à l'étape 1 (instructions), passer à l'étape 2 (sélection)
+    console.log("beginCalibrationStep appelé, calibrationStep actuel =", calibrationStep);
+    if (calibrationStep === 0 || calibrationStep === 1) {
+      console.log("Moving to selection mode");
+      setCalibrationStep(2);
+      // Vérifier que le state est bien mis à jour
+      setTimeout(() => {
+        console.log("Après setCalibrationStep(2), calibrationStep devrait être 2");
+      }, 0);
+    } 
+    // Si nous sommes déjà à l'étape 2 (sélection), valider et passer à l'élément suivant
+    else if (calibrationStep === 2) {
+      console.log("Completing current element selection");
+      completeCalibration(); // Passer à l'élément suivant
+    }
+  }, [calibrationStep, completeCalibration]);
   
   const addCalibrationPoint = useCallback((x: number, y: number) => {
     if (!currentElementType) return;
@@ -75,28 +109,6 @@ export function useCalibration() {
     setCalibrationStep(4); // Move to review step
     console.log("Set real dimensions and moved to review step");
   }, []);
-  
-  const completeCalibration = useCallback(() => {
-    // Move to the next element type in the sequence
-    const nextStepIndex = currentStepIndex + 1;
-    
-    if (nextStepIndex < calibrationSequence.length) {
-      // Go to the next calibration step
-      setCurrentStepIndex(nextStepIndex);
-      setCurrentElementType(calibrationSequence[nextStepIndex]);
-      setCalibrationStep(1); // Show instructions again for next step
-      toast.success(`Étape de calibration complétée! Passons à l'étape suivante.`);
-      console.log("Completed calibration for current element, moving to next step");
-    } else {
-      // Complete the whole calibration process
-      setCalibrationStep(0);
-      setIsCalibrating(false);
-      setCurrentElementType(null);
-      setCurrentStepIndex(0);
-      toast.success('Calibration terminée avec succès!');
-      console.log("Calibration fully completed");
-    }
-  }, [currentStepIndex, calibrationSequence]);
   
   const cancelCalibration = useCallback(() => {
     setCalibrationStep(1); // Retourner à l'écran d'instruction

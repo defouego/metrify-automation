@@ -8,21 +8,11 @@ import RightPanel from '@/components/project/RightPanel';
 import NewProjectModal from '@/components/project/NewProjectModal';
 import ProjectToolbar from '@/components/project/ProjectToolbar';
 import ProjectLayout from '@/components/project/ProjectLayout';
+import { useCalibration } from '@/hooks/useCalibration';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import CalibrationGuide from '@/components/project/CalibrationGuide';
-import { CalibrationProvider, useCalibrationContext } from '@/contexts/CalibrationContext';
 
-// Component principal enveloppé par le Provider
 const ProjectView = () => {
-  return (
-    <CalibrationProvider>
-      <ProjectViewContent />
-    </CalibrationProvider>
-  );
-};
-
-// Contenu principal qui utilise le contexte
-const ProjectViewContent = () => {
   const { id } = useParams();
   const [projet, setProjet] = useState<Projet | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -30,12 +20,12 @@ const ProjectViewContent = () => {
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [hoveredElementId, setHoveredElementId] = useState<string | null>(null);
 
-  // Utiliser le contexte de calibration partagé
+  // Access calibration state from the hook
   const { 
     isCalibrating, 
     calibrationStep,
     startCalibration
-  } = useCalibrationContext();
+  } = useCalibration();
 
   // Initialize project data (this would come from API in a real app)
   useEffect(() => {
@@ -220,11 +210,8 @@ const ProjectViewContent = () => {
         </div>
       </div>
       
-      {/* Calibration Dialog - Show for introduction (step 0) and instructions (step 1) */}
-      <Dialog 
-        open={isCalibrating && (calibrationStep === 0 || calibrationStep === 1)} 
-        onOpenChange={() => {}}
-      >
+      {/* Calibration Dialog - Only show for step 1 (instructions) */}
+      <Dialog open={isCalibrating && (calibrationStep === 0 || calibrationStep === 1)} onOpenChange={() => }}>
         <DialogContent className="p-0 border-0 max-w-xl">
           <DialogTitle className="sr-only">Calibration Guide</DialogTitle>
           <CalibrationGuide onClose={() => console.log('Close calibration guide')} />

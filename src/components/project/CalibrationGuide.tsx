@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Hand, HandMetal, Check, ChevronRight } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { useCalibration } from '@/hooks/useCalibration';
+import { useCalibrationContext } from '@/contexts/CalibrationContext';
 import { cn } from "@/lib/utils";
 import { ElementType } from '@/types/project';
 
@@ -21,7 +20,7 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
     beginCalibrationStep,
     completeCalibration,
     currentTypePoints
-  } = useCalibration();
+  } = useCalibrationContext();
   
   // Show different content based on the element type being calibrated
   const renderStepContent = () => {
@@ -111,10 +110,14 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
 
           <div className="flex justify-end">
             <Button 
-              onClick={beginCalibrationStep}
+              onClick={() => {
+                console.log("Bouton 'Commencer l'identification' cliqué, calibrationStep =", calibrationStep);
+                beginCalibrationStep();
+                console.log("Après beginCalibrationStep, le calibrationStep devrait passer à 2");
+              }}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              Commencer l'identification
+              {calibrationStep === 2 ? "Valider et continuer" : "Commencer l'identification"}
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </div>

@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { useCalibration } from '@/hooks/useCalibration';
+import { useCalibrationContext } from '@/contexts/CalibrationContext';
 import CalibrationToolbar from '@/components/project/CalibrationToolbar';
 import { ElementType } from '@/types/project';
 import { toast } from 'sonner';
@@ -16,8 +15,9 @@ const PlanViewer = ({ projectId, isCalibrating }: PlanViewerProps) => {
   const { 
     calibrationStep, 
     addCalibrationPoint, 
-    currentElementType 
-  } = useCalibration();
+    currentElementType,
+    currentTypePoints 
+  } = useCalibrationContext();
   
   // Mock function to represent what would be done by the external plan rendering service
   const renderPlan = () => {
