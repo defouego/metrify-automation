@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Ouvrage, Plan, Projet, Surface } from '@/types/metr';
 import { Input } from '@/components/ui/input';
@@ -53,8 +54,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   // Get unique lots from the library
   const uniqueLots = [...new Set(ouvragesLibrary.map(o => o.lot))];
   
-  // Get unique types from the library
-  const uniqueTypes = [...new Set(ouvragesLibrary.map(o => o.type || ''))].filter(Boolean);
+  // Get unique types - Create a "fake" type for items without type property
+  // This avoids the TS error and the empty string in SelectItem
+  const ouvrageTypes = ouvragesLibrary.map(o => o.type || 'non-classé');
+  const uniqueTypes = [...new Set(ouvrageTypes)].filter(Boolean);
   
   // Get unique units from the library
   const uniqueUnits = [...new Set(ouvragesLibrary.map(o => o.unite))];
@@ -63,7 +66,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   const filteredOuvrages = ouvragesLibrary.filter(ouvrage => {
     const matchesSearch = ouvrage.designation.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLot = selectedLot ? ouvrage.lot === selectedLot : true;
-    const matchesType = selectedType ? ouvrage.type === selectedType : true;
+    const matchesType = selectedType ? (ouvrage.type || 'non-classé') === selectedType : true;
     const matchesUnit = selectedUnit ? ouvrage.unite === selectedUnit : true;
     return matchesSearch && matchesLot && matchesType && matchesUnit;
   });
@@ -214,14 +217,14 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
             <div className="flex flex-wrap gap-2">
               {/* Lot filter */}
               <Select 
-                value={selectedLot || ''} 
-                onValueChange={(value) => setSelectedLot(value || null)}
+                value={selectedLot || 'all'} 
+                onValueChange={(value) => setSelectedLot(value === 'all' ? null : value)}
               >
                 <SelectTrigger className="w-full md:w-auto">
                   <SelectValue placeholder="Lot" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous les lots</SelectItem>
+                  <SelectItem value="all">Tous les lots</SelectItem>
                   {uniqueLots.map(lot => (
                     <SelectItem key={lot} value={lot}>{lot}</SelectItem>
                   ))}
@@ -230,14 +233,14 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
               
               {/* Type filter */}
               <Select 
-                value={selectedType || ''} 
-                onValueChange={(value) => setSelectedType(value || null)}
+                value={selectedType || 'all'} 
+                onValueChange={(value) => setSelectedType(value === 'all' ? null : value)}
               >
                 <SelectTrigger className="w-full md:w-auto">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous les types</SelectItem>
+                  <SelectItem value="all">Tous les types</SelectItem>
                   {uniqueTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
@@ -246,14 +249,14 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
               
               {/* Unit filter */}
               <Select 
-                value={selectedUnit || ''} 
-                onValueChange={(value) => setSelectedUnit(value || null)}
+                value={selectedUnit || 'all'} 
+                onValueChange={(value) => setSelectedUnit(value === 'all' ? null : value)}
               >
                 <SelectTrigger className="w-full md:w-auto">
                   <SelectValue placeholder="Unité" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Toutes les unités</SelectItem>
+                  <SelectItem value="all">Toutes les unités</SelectItem>
                   {uniqueUnits.map(unit => (
                     <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                   ))}
