@@ -2,16 +2,10 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import CalibrationGuide from '@/components/project/CalibrationGuide';
-import DetailedMeasurements from '@/components/project/DetailedMeasurements';
 
-const ProjectViewFixContent = ({ 
-  isCalibrating, 
-  calibrationStep,
-  projet 
-}: { 
+const ProjectViewFixContent = ({ isCalibrating, calibrationStep }: { 
   isCalibrating: boolean;
   calibrationStep: number;
-  projet: any;  // Using 'any' here since we're receiving it from parent component
 }) => (
   <>
     {/* Calibration Dialog - Show for introduction and between steps */}
@@ -20,10 +14,7 @@ const ProjectViewFixContent = ({
         <DialogTitle className="sr-only">Calibration Guide</DialogTitle>
         <CalibrationGuide onClose={() => console.log('Close calibration guide')} />
       </DialogContent>
-    </Dialog>
-    
-    {/* Detailed Measurements View */}
-    {projet && !isCalibrating && <DetailedMeasurements projet={projet} />}
+    </Dialog> 
   </>
 );
 

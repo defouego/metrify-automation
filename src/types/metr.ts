@@ -1,4 +1,3 @@
-
 // Types for Metr application
 
 export interface Element {
@@ -45,7 +44,6 @@ export interface Ouvrage {
   id: string;
   designation: string;
   lot: string;
-  type?: string;
   quantite: number;
   unite: string;
   prix_unitaire: number;

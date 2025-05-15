@@ -216,11 +216,20 @@ const ProjectViewContent = () => {
             onElementHover={setHoveredElementId}
             selectedSurface={selectedSurface}
             setSelectedSurface={setSelectedSurface}
-            isCalibrating={isCalibrating}
-            calibrationStep={calibrationStep}
           />
         </div>
       </div>
+      
+      {/* Calibration Dialog - Show for introduction (step 0) and instructions (step 1) */}
+      <Dialog 
+        open={isCalibrating && (calibrationStep === 0 || calibrationStep === 1)} 
+        onOpenChange={() => {}}
+      >
+        <DialogContent className="p-0 border-0 max-w-xl">
+          <DialogTitle className="sr-only">Calibration Guide</DialogTitle>
+          <CalibrationGuide onClose={() => console.log('Close calibration guide')} />
+        </DialogContent>
+      </Dialog>
       
       <NewProjectModal 
         isOpen={isNewProjectModalOpen}
