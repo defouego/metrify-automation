@@ -68,7 +68,7 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
                   className={cn(
                     "w-2 h-2 rounded-full",
                     idx < currentStepIndex ? "bg-green-600" : 
-                    idx === currentStepIndex ? "bg-blue-600" : 
+                    idx === currentStepIndex ? "bg-primary" : 
                     "bg-gray-300"
                   )}
                 ></div>
@@ -80,7 +80,7 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
         <div className="p-6">
           <div className="mb-6">
             <div className="mb-4 bg-gray-50 p-4 rounded-lg border border-gray-100 flex items-center">
-              <Hand className="text-blue-600 mr-3 h-8 w-8" />
+              <Hand className="text-primary mr-3 h-8 w-8" />
               <p className="text-gray-700">
                 {instructionText}
               </p>
@@ -115,7 +115,7 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
                 beginCalibrationStep();
                 console.log("Après beginCalibrationStep, le calibrationStep devrait passer à 2");
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-primary hover:bg-blue-700 text-white"
             >
               {calibrationStep === 2 ? "Valider et continuer" : "Commencer l'identification"}
               <ChevronRight className="ml-2 h-4 w-4" />
@@ -142,7 +142,7 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
         transition={{ delay: 0.2 }}
       >
         <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <HandMetal className="w-10 h-10 text-blue-600" />
+          <HandMetal className="w-10 h-10 text-primary" />
         </div>
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Calibrage du Plan</h2>
         <p className="text-gray-600">
@@ -158,28 +158,28 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
       >
         <div className="flex items-center space-x-3 text-left">
           <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center">
-            <span className="text-sm font-semibold text-blue-600">1</span>
+            <span className="text-sm font-semibold text-primary">1</span>
           </div>
           <span className="text-gray-600">Identification des portes</span>
         </div>
         
         <div className="flex items-center space-x-3 text-left">
           <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center">
-            <span className="text-sm font-semibold text-blue-600">2</span>
+            <span className="text-sm font-semibold text-primary">2</span>
           </div>
           <span className="text-gray-600">Identification des menuiseries</span>
         </div>
         
         <div className="flex items-center space-x-3 text-left">
           <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center">
-            <span className="text-sm font-semibold text-blue-600">3</span>
+            <span className="text-sm font-semibold text-primary">3</span>
           </div>
           <span className="text-gray-600">Identification des murs</span>
         </div>
         
         <div className="flex items-center space-x-3 text-left">
           <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center">
-            <span className="text-sm font-semibold text-blue-600">4</span>
+            <span className="text-sm font-semibold text-primary">4</span>
           </div>
           <span className="text-gray-600">Identification des pièces</span>
         </div>
@@ -192,7 +192,7 @@ const CalibrationGuide: React.FC<CalibrationGuideProps> = ({ onClose }) => {
       >
         <Button 
           onClick={beginCalibrationStep} 
-          className="w-full bg-blue-600 hover:bg-blue-700 transition-colors text-white"
+          className="w-full bg-primary hover:bg-blue-800 transition-colors text-white"
           size="lg"
         >
           Commencer le calibrage <ChevronRight className="ml-1 h-4 w-4" />

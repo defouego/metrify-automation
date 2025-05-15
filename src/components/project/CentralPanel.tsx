@@ -100,7 +100,7 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
         <div className="absolute inset-0 flex items-center justify-center bg-white">
           <div className="text-center max-w-md mx-auto p-6">
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
             </div>
@@ -110,7 +110,7 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
             </p>
             <Button
               onClick={handleUploadClick}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-metrBlue hover:bg-blue-800 text-white"
             >
               Importer un plan DWG
             </Button>

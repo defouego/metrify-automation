@@ -217,7 +217,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
     <div className="w-full bg-white border-l border-gray-200 flex flex-col h-full">
       <div className="p-4 border-b">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold text-blue-600">Récapitulatif</h2>
+          <h2 className="text-lg font-semibold text-primary">Récapitulatif</h2>
           <Button
             size="sm"
             onClick={() => downloadExcel(projet)}
@@ -326,7 +326,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-7 w-7 text-gray-400 hover:text-blue-600"
+                              className="h-7 w-7 text-gray-400 hover:text-primary"
                               onClick={() => handleStartEditingOuvrage(ouvrage)}
                             >
                               <Edit2 size={14} />

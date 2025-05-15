@@ -91,11 +91,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
         {/* Project Ouvrages Tab */}
         <TabsContent value="ouvrages" className="h-[calc(100vh-120px)] overflow-auto">
           <div className="p-2">
-            <h2 className="text-lg font-semibold mb-2 text-blue-600">Ouvrages du projet</h2>
+            <h2 className="text-lg font-semibold mb-2 text-primary">Ouvrages du projet</h2>
             
             {selectedSurface && (
               <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
-                <h3 className="text-sm font-medium text-blue-600">Surface sélectionnée</h3>
+                <h3 className="text-sm font-medium text-primary">Surface sélectionnée</h3>
                 <p className="text-xs text-gray-600">{selectedSurface.nom} ({selectedSurface.superficie.toFixed(2)} {selectedSurface.unite})</p>
                 <p className="text-xs text-gray-500 mt-1">Les ouvrages ajoutés seront associés à cette surface</p>
               </div>
@@ -198,7 +198,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-8 w-8 p-0 rounded-full bg-blue-600 text-white hover:bg-blue-700"
+                        className="h-8 w-8 p-0 rounded-full bg-metrBlue text-white hover:bg-blue-800"
                         onClick={() => handleAddOuvrage(ouvrage)}
                       >
                         <Plus className="h-4 w-4" />
