@@ -1,18 +1,30 @@
 import React, { useState } from 'react';
-import { Plus, Upload, Search, Filter } from 'lucide-react';
+import { Plus, Upload, Search } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LibraryItem, ItemUnit, type Library as LibraryType } from '@/types/library';
 import BibliothequeFilter from '@/components/Bibliotheque/BibliothequeFilter';
 import BibliothequeTable from '@/components/Bibliotheque/BibliothequeTable';
 import CreateArticleDialog, { ItemFormValues, itemFormSchema } from '@/components/Bibliotheque/CreateArticleDialog';
-import ImportExcelModal from '@/components/Bibliotheque/ImportExcelModal';
-import LoadBibliothequeModal from '@/components/Bibliotheque/LoadBibliothequeModal';
-import CreateProjectButton from '@/components/Bibliotheque/CreateProjectButton';
+import ImportBibliothequeModal from '@/components/Bibliotheque/ImportBibliothequeModal';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 // Sample data
 const sampleItems: LibraryItem[] = [
@@ -89,6 +101,12 @@ const sampleItems: LibraryItem[] = [
 // Sample libraries
 const sampleLibraries: LibraryType[] = [
   {
+    id: 'all',
+    name: 'Tous les articles',
+    createdAt: '01/01/2025',
+    itemCount: 6
+  },
+  {
     id: 'default',
     name: 'Bibliothèque par défaut',
     createdAt: '01/01/2025',
@@ -151,6 +169,8 @@ const units = [
   { code: 'U' as ItemUnit, name: 'Unité' }
 ];
 
+const ITEMS_PER_PAGE = 100;
+
 const Library = () => {
   const [items, setItems] = useState<LibraryItem[]>(sampleItems);
   const [libraries, setLibraries] = useState<LibraryType[]>(sampleLibraries);
@@ -158,13 +178,12 @@ const Library = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [unitFilter, setUnitFilter] = useState('all');
-  const [libraryFilter, setLibraryFilter] = useState('all');
-  const [currentTab, setCurrentTab] = useState('items');
+  const [selectedLibrary, setSelectedLibrary] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [isLoadLibraryDialogOpen, setIsLoadLibraryDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   
   // Initialize form
@@ -178,7 +197,7 @@ const Library = () => {
       unite: '',
       prix_unitaire: 0,
       description: '',
-      bibliotheque_id: 'default',
+      bibliotheque_id: selectedLibrary !== 'all' ? selectedLibrary : 'default',
       tags: []
     }
   });
@@ -275,69 +294,56 @@ const Library = () => {
   };
   
   // Handle import confirmation
-  const handleImportConfirm = (rows: any[]) => {
-    // Create new items from valid rows
+  const handleImportConfirm = (data: { items?: any[], library?: string, format?: string }) => {
     const today = new Date();
     const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
     
-    const newItems: LibraryItem[] = rows.map(row => ({
-      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-      designation: row.designation,
-      lot: row.lot,
-      type: row.type,
-      unite: row.unite as ItemUnit,
-      prix_unitaire: typeof row.prix_unitaire === 'string' ? parseFloat(row.prix_unitaire) : row.prix_unitaire,
-      date_creation: formattedDate,
-      date_derniere_utilisation: formattedDate,
-      bibliotheque_id: row.bibliotheque || 'default',
-      actif: true,
-      isNew: true
-    }));
-    
-    // Add new items to the existing ones
-    setItems([...newItems, ...items]);
-    
-    toast({
-      title: "Import réussi",
-      description: `${rows.length} articles importés avec succès`,
-    });
-  };
-  
-  // Handle load library
-  const handleLoadLibrary = (name: string) => {
-    const libraryId = name.replace(/\s+/g, '_').toLowerCase();
-    
-    // Check if library already exists
-    if (libraries.some(lib => lib.id === libraryId)) {
-      toast({
-        title: "Bibliothèque existante",
-        description: `La bibliothèque "${name}" existe déjà`,
-        variant: "destructive",
-      });
-      return;
+    // Create a new library if needed
+    if (data.library && !libraries.some(lib => lib.id === data.library)) {
+      const libraryId = data.library.replace(/\s+/g, '_').toLowerCase();
+      const newLibrary: LibraryType = {
+        id: libraryId,
+        name: data.library,
+        createdAt: formattedDate,
+        itemCount: data.items?.length || 0
+      };
+      
+      setLibraries([...libraries, newLibrary]);
     }
     
-    // Create a new library
-    const today = new Date();
-    const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
-    
-    const newLibrary: LibraryType = {
-      id: libraryId,
-      name: name,
-      createdAt: formattedDate,
-      itemCount: 0
-    };
-    
-    setLibraries([...libraries, newLibrary]);
-    
-    toast({
-      title: "Bibliothèque créée",
-      description: `La bibliothèque "${name}" a été créée avec succès`,
-    });
+    // Create new items from valid rows
+    if (data.items && data.items.length > 0) {
+      const newItems: LibraryItem[] = data.items.map(row => ({
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+        designation: row.designation,
+        lot: row.lot,
+        type: row.type,
+        unite: row.unite as ItemUnit,
+        prix_unitaire: typeof row.prix_unitaire === 'string' ? parseFloat(row.prix_unitaire) : row.prix_unitaire,
+        date_creation: formattedDate,
+        date_derniere_utilisation: formattedDate,
+        bibliotheque_id: data.library || 'default',
+        actif: true,
+        isNew: true
+      }));
+      
+      // Add new items to the existing ones
+      setItems([...newItems, ...items]);
+      
+      toast({
+        title: "Import réussi",
+        description: `${data.items.length} articles importés avec succès`,
+      });
+    }
   };
-
+  
   // Filter items based on search and filters
   const filteredItems = items.filter(item => {
+    // Library filter
+    if (selectedLibrary !== 'all' && item.bibliotheque_id !== selectedLibrary) {
+      return false;
+    }
+    
     // Search query filter
     if (searchQuery && 
         !item.designation.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -361,11 +367,6 @@ const Library = () => {
       return false;
     }
     
-    // Library filter
-    if (libraryFilter !== 'all' && item.bibliotheque_id !== libraryFilter) {
-      return false;
-    }
-    
     return true;
   });
 
@@ -375,86 +376,174 @@ const Library = () => {
   // Get unique units from items for filter
   const uniqueUnits = Array.from(new Set(items.map(item => item.unite)));
   
-  // Get unique libraries for filter
-  const uniqueLibraries = libraries.map(lib => lib.id);
+  // Calculate pagination
+  const pageCount = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedLibrary, searchQuery, categoryFilter, typeFilter, unitFilter]);
+
+  const handleChangeLibrary = (value: string) => {
+    setSelectedLibrary(value);
+    // Update form default library
+    form.setValue('bibliotheque_id', value !== 'all' ? value : 'default');
+  };
+
+  const handleAddArticle = () => {
+    // Pre-select the current library in the form
+    form.setValue('bibliotheque_id', selectedLibrary !== 'all' ? selectedLibrary : 'default');
+    setIsDialogOpen(true);
+  };
 
   return (
     <DashboardLayout>
       <div className="container pb-10 pt-8">
-        {/* Header with tabs */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <h1 className="text-3xl font-bold">Ma bibliothèque</h1>
           
           <div className="flex space-x-2 mt-4 md:mt-0">
             <Button 
-              className="bg-metrOrange hover:bg-metrOrange/90"
-              onClick={() => setIsDialogOpen(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Créer un article
-            </Button>
-            
-            <Button 
               variant="outline"
+              className="flex items-center gap-2"
               onClick={() => setIsImportDialogOpen(true)}
             >
-              <Upload className="mr-2 h-4 w-4" />
-              Importer depuis Excel
+              <Upload className="h-4 w-4" />
+              Importer une bibliothèque
             </Button>
-            
-            <Button 
-              variant="outline"
-              onClick={() => setIsLoadLibraryDialogOpen(true)}
-            >
-              Charger bibliothèque
-            </Button>
-            
-            <CreateProjectButton />
           </div>
         </div>
         
-        <Tabs value={currentTab} onValueChange={setCurrentTab} className="mb-6">
-          <TabsList className="mb-6">
-            <TabsTrigger value="items">📦 Articles</TabsTrigger>
-            <TabsTrigger value="libraries">📃 Mes bibliothèques</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="items" className="space-y-6">
-            {/* Search and filters row */}
-            <BibliothequeFilter
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              categoryFilter={categoryFilter}
-              setCategoryFilter={setCategoryFilter}
-              typeFilter={typeFilter}
-              setTypeFilter={setTypeFilter}
-              unitFilter={unitFilter}
-              setUnitFilter={setUnitFilter}
-              libraryFilter={libraryFilter}
-              setLibraryFilter={setLibraryFilter}
-              categories={categories}
-              uniqueTypes={uniqueTypes}
-              uniqueUnits={uniqueUnits}
-              libraries={uniqueLibraries}
+        {/* Library super-filter */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Bibliothèque
+          </label>
+          <Select value={selectedLibrary} onValueChange={handleChangeLibrary}>
+            <SelectTrigger className="w-full md:w-[300px]">
+              <SelectValue placeholder="Sélectionner une bibliothèque" />
+            </SelectTrigger>
+            <SelectContent>
+              {libraries.map(library => (
+                <SelectItem key={library.id} value={library.id}>
+                  {library.name} ({library.itemCount} articles)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Search and filters row */}
+        <div className="flex flex-col lg:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              placeholder="Rechercher un article..."
+              className="pl-10 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-            
-            {/* Table */}
-            <BibliothequeTable
-              filteredItems={filteredItems}
-              onEditItem={handleEditItem}
-              onDeleteItem={handleDeleteItem}
-            />
-          </TabsContent>
+          </div>
           
-          <TabsContent value="libraries">
-            <div className="rounded-lg border p-8 text-center">
-              <h3 className="text-lg font-medium mb-2">Mes bibliothèques enregistrées</h3>
-              <p className="text-muted-foreground">
-                Vous pouvez gérer différentes bibliothèques et basculer entre elles selon vos projets.
-              </p>
-            </div>
-          </TabsContent>
-        </Tabs>
+          <BibliothequeFilter
+            categoryFilter={categoryFilter}
+            setCategoryFilter={setCategoryFilter}
+            typeFilter={typeFilter}
+            setTypeFilter={setTypeFilter}
+            unitFilter={unitFilter}
+            setUnitFilter={setUnitFilter}
+            categories={categories}
+            uniqueTypes={uniqueTypes}
+            uniqueUnits={uniqueUnits}
+          />
+          
+          <Button 
+            className="bg-metrOrange hover:bg-metrOrange/90"
+            onClick={handleAddArticle}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Ajouter un article
+          </Button>
+        </div>
+        
+        {/* Table with count */}
+        <div className="mb-2 text-sm text-gray-500">
+          {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''} trouvé{filteredItems.length > 1 ? 's' : ''} 
+          {selectedLibrary !== 'all' && (
+            <span> dans {libraries.find(lib => lib.id === selectedLibrary)?.name}</span>
+          )}
+        </div>
+        
+        {/* Table */}
+        <BibliothequeTable
+          filteredItems={paginatedItems}
+          onEditItem={handleEditItem}
+          onDeleteItem={handleDeleteItem}
+        />
+        
+        {/* Pagination */}
+        {pageCount > 1 && (
+          <Pagination className="mt-6">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) setCurrentPage(currentPage - 1);
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: Math.min(5, pageCount) }).map((_, i) => {
+                // Simple pagination logic for now
+                let pageNumber: number;
+                
+                if (pageCount <= 5) {
+                  pageNumber = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNumber = i + 1;
+                } else if (currentPage >= pageCount - 2) {
+                  pageNumber = pageCount - 4 + i;
+                } else {
+                  pageNumber = currentPage - 2 + i;
+                }
+                
+                return (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(pageNumber);
+                      }}
+                      isActive={currentPage === pageNumber}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < pageCount) setCurrentPage(currentPage + 1);
+                  }}
+                  className={currentPage === pageCount ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
         
         {/* Article Creation/Edit Dialog */}
         <CreateArticleDialog
@@ -463,23 +552,16 @@ const Library = () => {
           isEditMode={isEditMode}
           categories={categories}
           units={units}
-          libraries={uniqueLibraries}
+          libraries={libraries.filter(lib => lib.id !== 'all').map(lib => lib.id)}
           form={form}
           onSubmit={onSubmit}
         />
         
-        {/* Import Excel Dialog */}
-        <ImportExcelModal
+        {/* Import Dialog */}
+        <ImportBibliothequeModal
           open={isImportDialogOpen}
           onOpenChange={setIsImportDialogOpen}
           onImportConfirm={handleImportConfirm}
-        />
-        
-        {/* Load Library Dialog */}
-        <LoadBibliothequeModal
-          open={isLoadLibraryDialogOpen}
-          onOpenChange={setIsLoadLibraryDialogOpen}
-          onLoadLibrary={handleLoadLibrary}
         />
       </div>
     </DashboardLayout>

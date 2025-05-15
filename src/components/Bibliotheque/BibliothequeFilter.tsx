@@ -1,57 +1,37 @@
 
 import React from 'react';
-import { Search, Filter } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Filter } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { FormLabel } from '@/components/ui/form';
 
 interface BibliothequeFilterProps {
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
   categoryFilter: string;
   setCategoryFilter: (category: string) => void;
   typeFilter: string;
   setTypeFilter: (type: string) => void;
   unitFilter: string;
   setUnitFilter: (unit: string) => void;
-  libraryFilter: string;
-  setLibraryFilter: (library: string) => void;
   categories: string[];
   uniqueTypes: string[];
   uniqueUnits: string[];
-  libraries: string[];
 }
 
 const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
-  searchQuery,
-  setSearchQuery,
   categoryFilter,
   setCategoryFilter,
   typeFilter,
   setTypeFilter,
   unitFilter,
   setUnitFilter,
-  libraryFilter,
-  setLibraryFilter,
   categories,
   uniqueTypes,
-  uniqueUnits,
-  libraries
+  uniqueUnits
 }) => {
   return (
-    <div className="flex flex-col lg:flex-row gap-4 mb-6">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-        <Input 
-          placeholder="Rechercher un article..." 
-          className="pl-10" 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-      
+    <>
+      {/* Mobile filters */}
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="outline" className="lg:hidden">
@@ -64,22 +44,6 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
             <SheetTitle>Filtres</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 mt-4">
-            {/* Mobile filters */}
-            <div>
-              <FormLabel>Bibliothèque</FormLabel>
-              <Select value={libraryFilter} onValueChange={setLibraryFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Toutes les bibliothèques" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les bibliothèques</SelectItem>
-                  {libraries.map(library => (
-                    <SelectItem key={library} value={library}>{library}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
             <div>
               <FormLabel>Lot</FormLabel>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -130,18 +94,6 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
       
       {/* Desktop filters */}
       <div className="hidden lg:flex lg:flex-row gap-2">
-        <Select value={libraryFilter} onValueChange={setLibraryFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Bibliothèque" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les bibliothèques</SelectItem>
-            {libraries.map(library => (
-              <SelectItem key={library} value={library}>{library}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Lot" />
@@ -178,7 +130,7 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
           </SelectContent>
         </Select>
       </div>
-    </div>
+    </>
   );
 };
 
