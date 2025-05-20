@@ -91,7 +91,8 @@ export function useLibraryDB() {
     bibliotheque_id: string = 'default',
     description?: string,
     subCategory?: string,
-    tags?: string[]
+    tags?: string[],
+    type?: string
   ): Promise<LibraryItem> => {
     setIsLoading(true);
     setError(null);
@@ -102,6 +103,7 @@ export function useLibraryDB() {
         designation,
         lot,
         subCategory,
+        type,
         unite,
         prix_unitaire,
         description,
@@ -235,7 +237,8 @@ export function useLibraryDB() {
         const sampleItems: Omit<LibraryItem, 'id'>[] = [
           { 
             designation: 'Béton de fondation', 
-            lot: '2- GROS ŒUVRE - MAÇONNERIE', 
+            lot: '2- GROS ŒUVRE - MAÇONNERIE',
+            type: 'Fondation', 
             unite: 'M3', 
             prix_unitaire: 120.50, 
             date_derniere_utilisation: formatDate(),
@@ -245,7 +248,8 @@ export function useLibraryDB() {
           },
           { 
             designation: 'Fenêtre PVC double vitrage', 
-            lot: '10- MENUISERIES EXTÉRIEURES', 
+            lot: '10- MENUISERIES EXTÉRIEURES',
+            type: 'Fenêtre', 
             unite: 'U', 
             prix_unitaire: 425.00, 
             date_derniere_utilisation: formatDate(), 
@@ -255,7 +259,8 @@ export function useLibraryDB() {
           },
           { 
             designation: 'Peinture mate blanche', 
-            lot: '8- PEINTURES', 
+            lot: '8- PEINTURES',
+            type: 'Peinture', 
             unite: 'L', 
             prix_unitaire: 28.75, 
             date_derniere_utilisation: formatDate(),
@@ -265,7 +270,8 @@ export function useLibraryDB() {
           },
           { 
             designation: 'Radiateur électrique', 
-            lot: '11- ÉLECTRICITÉ COURANTS FORTS', 
+            lot: '11- ÉLECTRICITÉ COURANTS FORTS',
+            type: 'Chauffage', 
             unite: 'U', 
             prix_unitaire: 199.90,
             date_creation: formatDate(),
@@ -274,7 +280,8 @@ export function useLibraryDB() {
           },
           { 
             designation: 'Carrelage grès cérame', 
-            lot: '6- CARRELAGES, REVÊTEMENTS', 
+            lot: '6- CARRELAGES, REVÊTEMENTS',
+            type: 'Carrelage', 
             unite: 'M2', 
             prix_unitaire: 45.20, 
             date_derniere_utilisation: formatDate(),
@@ -284,7 +291,8 @@ export function useLibraryDB() {
           },
           { 
             designation: 'Porte intérieure', 
-            lot: '9- MENUISERIES INTÉRIEURES', 
+            lot: '9- MENUISERIES INTÉRIEURES',
+            type: 'Porte', 
             unite: 'U', 
             prix_unitaire: 235.00, 
             date_derniere_utilisation: formatDate(),

@@ -22,7 +22,7 @@ export class AppDB extends Dexie {
       usageLinks: 'id, dbSourceId, projectId',
       projects: 'id, name, createdAt',
       plans: 'id, projectId, name',
-      libraryItems: 'id, designation, lot, bibliotheque_id, actif',
+      libraryItems: 'id, designation, lot, bibliotheque_id, actif, type',
       libraries: 'id, name, createdAt'
     });
   }

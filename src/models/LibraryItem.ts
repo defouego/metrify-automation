@@ -6,6 +6,7 @@ export interface LibraryItem {
   designation: string;
   lot: string;
   subCategory?: string;
+  type?: string;
   unite: ItemUnit;
   prix_unitaire: number;
   description?: string;
@@ -14,4 +15,6 @@ export interface LibraryItem {
   date_creation: string;
   date_derniere_utilisation?: string;
   actif: boolean;
+  isNew?: boolean;
+  fichier_joint?: string;
 }
