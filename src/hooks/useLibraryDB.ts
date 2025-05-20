@@ -92,7 +92,7 @@ export function useLibraryDB() {
     description?: string,
     subCategory?: string,
     tags?: string[],
-    type?: string
+    type: string = 'Non spécifié' // Default value for type since it's required
   ): Promise<LibraryItem> => {
     setIsLoading(true);
     setError(null);
@@ -103,7 +103,7 @@ export function useLibraryDB() {
         designation,
         lot,
         subCategory,
-        type,
+        type, // This is now required
         unite,
         prix_unitaire,
         description,
@@ -233,7 +233,7 @@ export function useLibraryDB() {
           await storage.addLibrary(library);
         }
         
-        // Import sample items
+        // Import sample items with required type field
         const sampleItems: Omit<LibraryItem, 'id'>[] = [
           { 
             designation: 'Béton de fondation', 
@@ -297,6 +297,7 @@ export function useLibraryDB() {
             prix_unitaire: 235.00, 
             date_derniere_utilisation: formatDate(),
             date_creation: formatDate(),
+            bibliotheque_id: 'default',
             actif: true
           }
         ];
