@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Upload, Search } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +10,7 @@ import BibliothequeFilter from '@/components/Bibliotheque/BibliothequeFilter';
 import BibliothequeTable from '@/components/Bibliotheque/BibliothequeTable';
 import CreateArticleDialog, { ItemFormValues, itemFormSchema } from '@/components/Bibliotheque/CreateArticleDialog';
 import ImportBibliothequeModal from '@/components/Bibliotheque/ImportBibliothequeModal';
+import { useLibraryDB } from '@/hooks/useLibraryDB';
 import {
   Dialog,
   DialogContent,
@@ -33,106 +34,6 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Input } from '@/components/ui/input';
-
-// Sample data
-const sampleItems: LibraryItem[] = [
-  { 
-    id: '1', 
-    designation: 'Béton de fondation', 
-    lot: '2- GROS ŒUVRE - MAÇONNERIE', 
-    type: 'Fondation', 
-    unite: 'M3', 
-    prix_unitaire: 120.50, 
-    date_derniere_utilisation: '15/04/2025',
-    date_creation: '10/04/2025',
-    actif: true
-  },
-  { 
-    id: '2', 
-    designation: 'Fenêtre PVC double vitrage', 
-    lot: '10- MENUISERIES EXTÉRIEURES', 
-    type: 'Menuiserie', 
-    unite: 'U', 
-    prix_unitaire: 425.00, 
-    date_derniere_utilisation: '17/04/2025', 
-    date_creation: '16/04/2025',
-    actif: true,
-    isNew: true,
-    bibliotheque_id: 'ATTIC+'
-  },
-  { 
-    id: '3', 
-    designation: 'Peinture mate blanche', 
-    lot: '8- PEINTURES', 
-    type: 'Finition', 
-    unite: 'L', 
-    prix_unitaire: 28.75, 
-    date_derniere_utilisation: '10/04/2025',
-    date_creation: '05/04/2025',
-    actif: true,
-    bibliotheque_id: 'BatiMat 2023'
-  },
-  { 
-    id: '4', 
-    designation: 'Radiateur électrique', 
-    lot: '11- ÉLECTRICITÉ COURANTS FORTS', 
-    type: 'Équipement', 
-    unite: 'U', 
-    prix_unitaire: 199.90,
-    date_creation: '01/04/2025',
-    actif: true
-  },
-  { 
-    id: '5', 
-    designation: 'Carrelage grès cérame', 
-    lot: '6- CARRELAGES, REVÊTEMENTS', 
-    type: 'Revêtement', 
-    unite: 'M2', 
-    prix_unitaire: 45.20, 
-    date_derniere_utilisation: '20/03/2025',
-    date_creation: '15/03/2025',
-    actif: true
-  },
-  { 
-    id: '6', 
-    designation: 'Porte intérieure', 
-    lot: '9- MENUISERIES INTÉRIEURES', 
-    type: 'Menuiserie', 
-    unite: 'U', 
-    prix_unitaire: 235.00, 
-    date_derniere_utilisation: '05/04/2025',
-    date_creation: '01/03/2025',
-    actif: true
-  }
-];
-
-// Sample libraries
-const sampleLibraries: LibraryType[] = [
-  {
-    id: 'all',
-    name: 'Tous les articles',
-    createdAt: '01/01/2025',
-    itemCount: 6
-  },
-  {
-    id: 'default',
-    name: 'Bibliothèque par défaut',
-    createdAt: '01/01/2025',
-    itemCount: 3
-  },
-  {
-    id: 'ATTIC+',
-    name: 'ATTIC+',
-    createdAt: '15/03/2025',
-    itemCount: 1
-  },
-  {
-    id: 'BatiMat 2023',
-    name: 'BatiMat 2023',
-    createdAt: '10/02/2025',
-    itemCount: 1
-  }
-];
 
 // Categories list
 const categories = [
@@ -180,8 +81,8 @@ const units = [
 const ITEMS_PER_PAGE = 100;
 
 const Library = () => {
-  const [items, setItems] = useState<LibraryItem[]>(sampleItems);
-  const [libraries, setLibraries] = useState<LibraryType[]>(sampleLibraries);
+  const [items, setItems] = useState<LibraryItem[]>([]);
+  const [libraries, setLibraries] = useState<LibraryType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -195,6 +96,21 @@ const Library = () => {
   const [isNewLibraryDialogOpen, setIsNewLibraryDialogOpen] = useState(false);
   const [newLibraryName, setNewLibraryName] = useState('');
   const { toast } = useToast();
+  
+  // Use our library database hook
+  const {
+    isLoading,
+    error,
+    createLibrary,
+    updateLibrary,
+    deleteLibrary,
+    getLibraries,
+    createLibraryItem,
+    updateLibraryItem,
+    deleteLibraryItem,
+    getLibraryItems,
+    initializeWithSampleData
+  } = useLibraryDB();
   
   // Initialize form
   const form = useForm<ItemFormValues>({
@@ -212,6 +128,29 @@ const Library = () => {
     }
   });
 
+  // Load data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await initializeWithSampleData();
+        const fetchedLibraries = await getLibraries();
+        setLibraries(fetchedLibraries);
+        
+        const fetchedItems = await getLibraryItems();
+        setItems(fetchedItems);
+      } catch (err) {
+        console.error('Error loading data:', err);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les données",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    loadData();
+  }, []);
+
   // Reset form when dialog closes
   const handleDialogOpenChange = (open: boolean) => {
     if (!open) {
@@ -228,7 +167,7 @@ const Library = () => {
       designation: item.designation,
       lot: item.lot,
       subCategory: item.subCategory || '',
-      type: item.type,
+      type: item.type || '',
       unite: item.unite,
       prix_unitaire: item.prix_unitaire,
       description: item.description || '',
@@ -240,112 +179,143 @@ const Library = () => {
   };
 
   // Handle form submission
-  const onSubmit = (values: ItemFormValues) => {
-    const today = new Date();
-    const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
-    
-    if (isEditMode && currentItemId) {
-      setItems(items.map(item => 
-        item.id === currentItemId ? {
-          ...item,
-          designation: values.designation,
-          lot: values.lot,
-          subCategory: values.subCategory,
-          type: values.type,
-          unite: values.unite as ItemUnit,
-          prix_unitaire: values.prix_unitaire,
-          description: values.description,
-          bibliotheque_id: values.bibliotheque_id,
-          date_derniere_utilisation: formattedDate
-        } : item
-      ));
-      
+  const onSubmit = async (values: ItemFormValues) => {
+    try {
+      if (isEditMode && currentItemId) {
+        // Update existing item
+        const existingItem = items.find(item => item.id === currentItemId);
+        if (existingItem) {
+          const updatedItem = await updateLibraryItem({
+            ...existingItem,
+            designation: values.designation,
+            lot: values.lot,
+            subCategory: values.subCategory,
+            type: values.type,
+            unite: values.unite as ItemUnit,
+            prix_unitaire: values.prix_unitaire,
+            description: values.description,
+            bibliotheque_id: values.bibliotheque_id
+          });
+          
+          setItems(items.map(item => item.id === currentItemId ? updatedItem : item));
+          
+          toast({
+            title: "Article mis à jour",
+            description: "L'article a été modifié avec succès",
+          });
+        }
+      } else {
+        // Create new item
+        const newItem = await createLibraryItem(
+          values.designation,
+          values.lot,
+          values.unite as ItemUnit,
+          values.prix_unitaire,
+          values.bibliotheque_id,
+          values.description,
+          values.subCategory,
+          values.tags
+        );
+        
+        setItems([newItem, ...items]);
+        
+        // Update library list to refresh item counts
+        const updatedLibraries = await getLibraries();
+        setLibraries(updatedLibraries);
+        
+        toast({
+          title: "Article créé",
+          description: "L'article a été ajouté avec succès à votre bibliothèque",
+        });
+      }
+      setIsDialogOpen(false);
+      form.reset();
+    } catch (err) {
+      console.error('Error saving item:', err);
       toast({
-        title: "Article mis à jour",
-        description: "L'article a été modifié avec succès",
-      });
-    } else {
-      const newItem: LibraryItem = {
-        id: Date.now().toString(),
-        designation: values.designation,
-        lot: values.lot,
-        subCategory: values.subCategory,
-        type: values.type,
-        unite: values.unite as ItemUnit,
-        prix_unitaire: values.prix_unitaire,
-        description: values.description,
-        bibliotheque_id: values.bibliotheque_id,
-        date_creation: formattedDate,
-        actif: true,
-        isNew: true
-      };
-      setItems([newItem, ...items]);
-      
-      toast({
-        title: "Article créé",
-        description: "L'article a été ajouté avec succès à votre bibliothèque",
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de l'enregistrement",
+        variant: "destructive"
       });
     }
-    setIsDialogOpen(false);
-    form.reset();
   };
 
   // Handle item delete
-  const handleDeleteItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
-    
-    toast({
-      title: "Article supprimé",
-      description: "L'article a été supprimé de votre bibliothèque",
-      variant: "destructive",
-    });
+  const handleDeleteItem = async (id: string) => {
+    try {
+      await deleteLibraryItem(id);
+      setItems(items.filter(item => item.id !== id));
+      
+      // Update library list to refresh item counts
+      const updatedLibraries = await getLibraries();
+      setLibraries(updatedLibraries);
+      
+      toast({
+        title: "Article supprimé",
+        description: "L'article a été supprimé de votre bibliothèque",
+      });
+    } catch (err) {
+      console.error('Error deleting item:', err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'article",
+        variant: "destructive"
+      });
+    }
   };
   
   // Handle import confirmation
-  const handleImportConfirm = (data: { items?: any[], library?: string, format?: string }) => {
-    const today = new Date();
-    const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
-    
-    // Create a new library if needed
-    if (data.library && !libraries.some(lib => lib.id === data.library)) {
-      const libraryId = data.library.replace(/\s+/g, '_').toLowerCase();
-      const newLibrary: LibraryType = {
-        id: libraryId,
-        name: data.library,
-        createdAt: formattedDate,
-        itemCount: data.items?.length || 0
-      };
+  const handleImportConfirm = async (data: { items?: any[], library?: string, format?: string }) => {
+    try {
+      // Create a new library if needed
+      if (data.library && !libraries.some(lib => lib.id === data.library)) {
+        await createLibrary(data.library);
+        
+        // Refresh libraries
+        const updatedLibraries = await getLibraries();
+        setLibraries(updatedLibraries);
+      }
       
-      setLibraries([...libraries, newLibrary]);
-    }
-    
-    // Create new items from valid rows
-    if (data.items && data.items.length > 0) {
-      const newItems: LibraryItem[] = data.items.map(row => ({
-        id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-        designation: row.designation,
-        lot: row.lot,
-        type: row.type,
-        unite: row.unite as ItemUnit,
-        prix_unitaire: typeof row.prix_unitaire === 'string' ? parseFloat(row.prix_unitaire) : row.prix_unitaire,
-        date_creation: formattedDate,
-        date_derniere_utilisation: formattedDate,
-        bibliotheque_id: data.library || 'default',
-        actif: true,
-        isNew: true
-      }));
-      
-      setItems([...newItems, ...items]);
-      
+      // Create new items from valid rows
+      if (data.items && data.items.length > 0) {
+        const libraryId = data.library || 'default';
+        const newItems: LibraryItem[] = [];
+        
+        for (const row of data.items) {
+          const newItem = await createLibraryItem(
+            row.designation,
+            row.lot,
+            row.unite as ItemUnit,
+            typeof row.prix_unitaire === 'string' ? parseFloat(row.prix_unitaire) : row.prix_unitaire,
+            libraryId
+          );
+          
+          newItems.push(newItem);
+        }
+        
+        setItems([...newItems, ...items]);
+        
+        // Update library list to refresh item counts
+        const updatedLibraries = await getLibraries();
+        setLibraries(updatedLibraries);
+        
+        toast({
+          title: "Import réussi",
+          description: `${data.items.length} articles importés avec succès`,
+        });
+      }
+    } catch (err) {
+      console.error('Error importing items:', err);
       toast({
-        title: "Import réussi",
-        description: `${data.items.length} articles importés avec succès`,
+        title: "Erreur d'importation",
+        description: "Une erreur s'est produite lors de l'importation des données",
+        variant: "destructive"
       });
     }
   };
   
   // Handle creating a new library
-  const handleCreateNewLibrary = () => {
+  const handleCreateNewLibrary = async () => {
     if (!newLibraryName.trim()) {
       toast({
         title: "Erreur",
@@ -355,40 +325,55 @@ const Library = () => {
       return;
     }
 
-    const today = new Date();
-    const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
-    
-    const libraryId = newLibraryName.replace(/\s+/g, '_').toLowerCase();
-    const newLibrary: LibraryType = {
-      id: libraryId,
-      name: newLibraryName,
-      createdAt: formattedDate,
-      itemCount: 0
+    try {
+      await createLibrary(newLibraryName);
+      
+      // Refresh libraries
+      const updatedLibraries = await getLibraries();
+      setLibraries(updatedLibraries);
+      
+      // Set the new library as selected
+      const libraryId = newLibraryName.replace(/\s+/g, '_').toLowerCase();
+      setSelectedLibrary(libraryId);
+      
+      setIsNewLibraryDialogOpen(false);
+      setNewLibraryName('');
+      
+      toast({
+        title: "Bibliothèque créée",
+        description: `La bibliothèque "${newLibraryName}" a été créée avec succès`
+      });
+    } catch (err) {
+      console.error('Error creating library:', err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer la bibliothèque",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Load items when selected library changes
+  useEffect(() => {
+    const loadLibraryItems = async () => {
+      try {
+        const fetchedItems = await getLibraryItems(selectedLibrary);
+        setItems(fetchedItems);
+      } catch (err) {
+        console.error('Error loading items:', err);
+      }
     };
     
-    setLibraries([...libraries, newLibrary]);
-    setSelectedLibrary(libraryId);
-    setIsNewLibraryDialogOpen(false);
-    setNewLibraryName('');
-    
-    toast({
-      title: "Bibliothèque créée",
-      description: `La bibliothèque "${newLibraryName}" a été créée avec succès`
-    });
-  };
+    loadLibraryItems();
+  }, [selectedLibrary]);
   
   // Filter items based on search and filters
   const filteredItems = items.filter(item => {
-    // Library filter
-    if (selectedLibrary !== 'all' && item.bibliotheque_id !== selectedLibrary) {
-      return false;
-    }
-    
     // Search query filter
     if (searchQuery && 
         !item.designation.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !item.lot.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !item.type.toLowerCase().includes(searchQuery.toLowerCase())) {
+        !(item.type && item.type.toLowerCase().includes(searchQuery.toLowerCase()))) {
       return false;
     }
     
@@ -411,7 +396,9 @@ const Library = () => {
   });
 
   // Extract unique types from items for filter
-  const uniqueTypes = Array.from(new Set(items.map(item => item.type)));
+  const uniqueTypes = Array.from(new Set(items
+    .filter(item => item.type)
+    .map(item => item.type as string)));
   
   // Get unique units from items for filter
   const uniqueUnits = Array.from(new Set(items.map(item => item.unite)));
@@ -458,6 +445,13 @@ const Library = () => {
             </Button>
           </div>
         </div>
+        
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="w-full text-center py-4">
+            <p>Chargement des données...</p>
+          </div>
+        )}
         
         {/* Library super-filter */}
         <div className="mb-6 flex items-center gap-2">

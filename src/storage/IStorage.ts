@@ -3,6 +3,8 @@ import { DatabaseSource } from '../models/DatabaseSource';
 import { UsageLink } from '../models/UsageLink';
 import { Project } from '../models/Project';
 import { Plan } from '../models/Plan';
+import { LibraryItem } from '../models/LibraryItem';
+import { Library } from '../models/Library';
 
 export interface IStorage {
   // DatabaseSource
@@ -27,4 +29,17 @@ export interface IStorage {
   updatePlan(plan: Plan): Promise<void>;
   deletePlan(id: string): Promise<void>;
   listPlansForProject(projectId: string): Promise<Plan[]>;
+
+  // LibraryItem
+  addLibraryItem(item: LibraryItem): Promise<void>;
+  updateLibraryItem(item: LibraryItem): Promise<void>;
+  deleteLibraryItem(id: string): Promise<void>;
+  listLibraryItems(): Promise<LibraryItem[]>;
+  listLibraryItemsByLibrary(libraryId: string): Promise<LibraryItem[]>;
+  
+  // Library
+  addLibrary(library: Library): Promise<void>;
+  updateLibrary(library: Library): Promise<void>;
+  deleteLibrary(id: string): Promise<void>;
+  listLibraries(): Promise<Library[]>;
 }

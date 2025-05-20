@@ -5,6 +5,8 @@ import { DatabaseSource } from '../models/DatabaseSource';
 import { UsageLink } from '../models/UsageLink';
 import { Project } from '../models/Project';
 import { Plan } from '../models/Plan';
+import { LibraryItem } from '../models/LibraryItem';
+import { Library } from '../models/Library';
 
 export class DexieStorage implements IStorage {
   // ↳ DatabaseSource
@@ -75,6 +77,51 @@ export class DexieStorage implements IStorage {
       .where('projectId')
       .equals(projectId)
       .toArray();
+  }
+
+  // ↳ LibraryItem
+  async addLibraryItem(item: LibraryItem): Promise<void> {
+    await db.libraryItems.add(item);
+  }
+  
+  async updateLibraryItem(item: LibraryItem): Promise<void> {
+    await db.libraryItems.put(item);
+  }
+  
+  async deleteLibraryItem(id: string): Promise<void> {
+    await db.libraryItems.delete(id);
+  }
+  
+  async listLibraryItems(): Promise<LibraryItem[]> {
+    return await db.libraryItems.toArray();
+  }
+  
+  async listLibraryItemsByLibrary(libraryId: string): Promise<LibraryItem[]> {
+    if (libraryId === 'all') {
+      return await this.listLibraryItems();
+    }
+    
+    return await db.libraryItems
+      .where('bibliotheque_id')
+      .equals(libraryId)
+      .toArray();
+  }
+  
+  // ↳ Library
+  async addLibrary(library: Library): Promise<void> {
+    await db.libraries.add(library);
+  }
+  
+  async updateLibrary(library: Library): Promise<void> {
+    await db.libraries.put(library);
+  }
+  
+  async deleteLibrary(id: string): Promise<void> {
+    await db.libraries.delete(id);
+  }
+  
+  async listLibraries(): Promise<Library[]> {
+    return await db.libraries.toArray();
   }
 }
 
