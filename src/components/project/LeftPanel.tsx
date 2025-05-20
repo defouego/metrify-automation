@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Ouvrage, Plan, Projet, Surface } from '@/types/metr';
 import { Input } from '@/components/ui/input';
@@ -29,7 +28,6 @@ interface LeftPanelProps {
 const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuvrage, onRemoveOuvrage }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLot, setSelectedLot] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
   const [selectedLibrary, setSelectedLibrary] = useState('all');
   
@@ -54,10 +52,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   // Get unique lots from the library
   const uniqueLots = [...new Set(ouvragesLibrary.map(o => o.lot))];
   
-  // Get unique types - Create a "fake" type for items without type property
-  // This avoids the TS error and the empty string in SelectItem
-  const ouvrageTypes = ouvragesLibrary.map(o => o.type || 'non-classé');
-  const uniqueTypes = [...new Set(ouvrageTypes)].filter(Boolean);
+  // Create a fake category for items based on lot instead of using 'type'
+  const ouvrageCategories = ouvragesLibrary.map(o => o.lot);
+  const uniqueCategories = [...new Set(ouvrageCategories)].filter(Boolean);
   
   // Get unique units from the library
   const uniqueUnits = [...new Set(ouvragesLibrary.map(o => o.unite))];
@@ -66,9 +63,8 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   const filteredOuvrages = ouvragesLibrary.filter(ouvrage => {
     const matchesSearch = ouvrage.designation.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLot = selectedLot ? ouvrage.lot === selectedLot : true;
-    const matchesType = selectedType ? (ouvrage.type || 'non-classé') === selectedType : true;
     const matchesUnit = selectedUnit ? ouvrage.unite === selectedUnit : true;
-    return matchesSearch && matchesLot && matchesType && matchesUnit;
+    return matchesSearch && matchesLot && matchesUnit;
   });
   
   // Add an ouvrage to the project
@@ -227,22 +223,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
                   <SelectItem value="all">Tous les lots</SelectItem>
                   {uniqueLots.map(lot => (
                     <SelectItem key={lot} value={lot}>{lot}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {/* Type filter */}
-              <Select 
-                value={selectedType || 'all'} 
-                onValueChange={(value) => setSelectedType(value === 'all' ? null : value)}
-              >
-                <SelectTrigger className="w-full md:w-auto">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les types</SelectItem>
-                  {uniqueTypes.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
