@@ -1,3 +1,4 @@
+
 // Types for Metr application
 
 export interface Element {
@@ -44,6 +45,7 @@ export interface Ouvrage {
   id: string;
   designation: string;
   lot: string;
+  subCategory: string; // Added missing subCategory property
   quantite: number;
   unite: string;
   prix_unitaire: number;
