@@ -61,12 +61,30 @@ export function useLibraryDB() {
         };
         libraries.unshift(newAllLibrary);
       }
+
+      // Add the "favorites" library if it doesn't exist
+      const favoritesLibrary = libraries.find(lib => lib.id === 'favorites');
+      if (!favoritesLibrary) {
+        const allItems = await storage.listLibraryItems();
+        const favoriteItems = allItems.filter(item => item.isFavorite);
+        const newFavoritesLibrary: Library = {
+          id: 'favorites',
+          name: 'Favoris',
+          createdAt: formatDate(),
+          itemCount: favoriteItems.length
+        };
+        libraries.push(newFavoritesLibrary);
+      }
       
       // Update library item counts
       const updatedLibraries = await Promise.all(libraries.map(async (library) => {
         if (library.id === 'all') {
           const allItems = await storage.listLibraryItems();
           return { ...library, itemCount: allItems.length };
+        } else if (library.id === 'favorites') {
+          const allItems = await storage.listLibraryItems();
+          const favoriteItems = allItems.filter(item => item.isFavorite);
+          return { ...library, itemCount: favoriteItems.length };
         } else {
           const items = await storage.listLibraryItemsByLibrary(library.id);
           return { ...library, itemCount: items.length };
@@ -97,6 +115,7 @@ export function useLibraryDB() {
     setError(null);
     
     try {
+      const currentDate = formatDate();
       const newItem: LibraryItem = {
         id: generateId(),
         designation,
@@ -107,8 +126,10 @@ export function useLibraryDB() {
         description,
         tags,
         bibliotheque_id,
-        date_creation: formatDate(),
-        actif: true
+        date_creation: currentDate,
+        date_derniere_utilisation: currentDate, // Set derniere_utilisation to creation date
+        actif: true,
+        isFavorite: false
       };
       
       await storage.addLibraryItem(newItem);
@@ -142,6 +163,18 @@ export function useLibraryDB() {
       };
       
       await storage.updateLibraryItem(updatedItem);
+
+      // If item is marked as favorite, ensure it's in the favorites library
+      if (updatedItem.isFavorite) {
+        const libraries = await storage.listLibraries();
+        const favoritesLibrary = libraries.find(lib => lib.id === 'favorites');
+        
+        if (!favoritesLibrary) {
+          // Create favorites library if it doesn't exist
+          await createLibrary('Favoris');
+        }
+      }
+      
       return updatedItem;
     } catch (err: any) {
       setError(err);
@@ -239,7 +272,8 @@ export function useLibraryDB() {
         // Update item with new library
         const updatedItem = {
           ...item,
-          bibliotheque_id: targetLibraryId
+          bibliotheque_id: targetLibraryId,
+          date_derniere_utilisation: formatDate() // Update last used date
         };
         
         await storage.updateLibraryItem(updatedItem);
@@ -275,6 +309,10 @@ export function useLibraryDB() {
       throw new Error('La bibliothèque "Tous les articles" ne peut pas être supprimée');
     }
     
+    if (id === 'favorites') {
+      throw new Error('La bibliothèque "Favoris" ne peut pas être supprimée');
+    }
+    
     setIsLoading(true);
     setError(null);
     
@@ -284,7 +322,11 @@ export function useLibraryDB() {
       // If deleteItems is false, move items to default library
       if (!deleteItems && items.length > 0) {
         for (const item of items) {
-          const updatedItem = { ...item, bibliotheque_id: 'default' };
+          const updatedItem = { 
+            ...item, 
+            bibliotheque_id: 'default',
+            date_derniere_utilisation: formatDate() // Update last used date
+          };
           await storage.updateLibraryItem(updatedItem);
         }
         
@@ -316,11 +358,37 @@ export function useLibraryDB() {
     setError(null);
     
     try {
+      let items: LibraryItem[];
+      
       if (libraryId === 'all') {
-        return await storage.listLibraryItems();
+        items = await storage.listLibraryItems();
+      } else if (libraryId === 'favorites') {
+        const allItems = await storage.listLibraryItems();
+        items = allItems.filter(item => item.isFavorite);
       } else {
-        return await storage.listLibraryItemsByLibrary(libraryId);
+        items = await storage.listLibraryItemsByLibrary(libraryId);
       }
+      
+      // Mark newly created items (less than 24 hours old)
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      
+      return items.map(item => {
+        const creationParts = item.date_creation.split('/');
+        if (creationParts.length === 3) {
+          const creationDate = new Date(
+            parseInt(creationParts[2]), 
+            parseInt(creationParts[1]) - 1, 
+            parseInt(creationParts[0])
+          );
+          
+          return {
+            ...item,
+            isNew: creationDate > oneDayAgo
+          };
+        }
+        return item;
+      });
     } catch (err: any) {
       setError(err);
       throw err;
@@ -358,6 +426,12 @@ export function useLibraryDB() {
             name: 'BatiMat 2023',
             createdAt: formatDate(),
             itemCount: 1
+          },
+          {
+            id: 'favorites',
+            name: 'Favoris',
+            createdAt: formatDate(),
+            itemCount: 1
           }
         ];
         
@@ -365,6 +439,7 @@ export function useLibraryDB() {
           await storage.addLibrary(library);
         }
         
+        const currentDate = formatDate();
         // Import sample items avec subCategory
         const sampleItems: Omit<LibraryItem, 'id'>[] = [
           { 
@@ -373,10 +448,11 @@ export function useLibraryDB() {
             subCategory: 'Fondation', 
             unite: 'M3', 
             prix_unitaire: 120.50, 
-            date_derniere_utilisation: formatDate(),
-            date_creation: formatDate(),
+            date_derniere_utilisation: currentDate,
+            date_creation: currentDate,
             bibliotheque_id: 'default',
-            actif: true
+            actif: true,
+            isFavorite: true
           },
           { 
             designation: 'Fenêtre PVC double vitrage', 
@@ -384,10 +460,11 @@ export function useLibraryDB() {
             subCategory: 'Fenêtre', 
             unite: 'U', 
             prix_unitaire: 425.00, 
-            date_derniere_utilisation: formatDate(), 
-            date_creation: formatDate(),
+            date_derniere_utilisation: currentDate, 
+            date_creation: currentDate,
             bibliotheque_id: 'attic_plus',
-            actif: true
+            actif: true,
+            isFavorite: false
           },
           { 
             designation: 'Peinture mate blanche', 
@@ -395,10 +472,11 @@ export function useLibraryDB() {
             subCategory: 'Peinture', 
             unite: 'L', 
             prix_unitaire: 28.75, 
-            date_derniere_utilisation: formatDate(),
-            date_creation: formatDate(),
+            date_derniere_utilisation: currentDate,
+            date_creation: currentDate,
             bibliotheque_id: 'batimat_2023',
-            actif: true
+            actif: true,
+            isFavorite: false
           },
           { 
             designation: 'Radiateur électrique', 
@@ -406,9 +484,11 @@ export function useLibraryDB() {
             subCategory: 'Chauffage', 
             unite: 'U', 
             prix_unitaire: 199.90,
-            date_creation: formatDate(),
+            date_creation: currentDate,
+            date_derniere_utilisation: currentDate,
             bibliotheque_id: 'default',
-            actif: true
+            actif: true,
+            isFavorite: false
           },
           { 
             designation: 'Carrelage grès cérame', 
@@ -416,10 +496,11 @@ export function useLibraryDB() {
             subCategory: 'Carrelage', 
             unite: 'M2', 
             prix_unitaire: 45.20, 
-            date_derniere_utilisation: formatDate(),
-            date_creation: formatDate(),
+            date_derniere_utilisation: currentDate,
+            date_creation: currentDate,
             bibliotheque_id: 'default',
-            actif: true
+            actif: true,
+            isFavorite: false
           },
           { 
             designation: 'Porte intérieure', 
@@ -427,10 +508,11 @@ export function useLibraryDB() {
             subCategory: 'Porte', 
             unite: 'U', 
             prix_unitaire: 235.00, 
-            date_derniere_utilisation: formatDate(),
-            date_creation: formatDate(),
+            date_derniere_utilisation: currentDate,
+            date_creation: currentDate,
             bibliotheque_id: 'default',
-            actif: true
+            actif: true,
+            isFavorite: false
           }
         ];
         

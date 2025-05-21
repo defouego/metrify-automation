@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Upload, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,11 +24,52 @@ const ImportBibliothequeModal: React.FC<ImportBibliothequeModalProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [importTab, setImportTab] = useState<string>("excel");
   const [isLoading, setIsLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      const validExtensions = ['.xlsx', '.xls', '.csv'];
+      const ext = droppedFile.name.substring(droppedFile.name.lastIndexOf('.')).toLowerCase();
+      
+      if (validExtensions.includes(ext)) {
+        setFile(droppedFile);
+      } else {
+        toast({
+          title: "Format non supporté",
+          description: "Veuillez déposer un fichier Excel (.xlsx, .xls, .csv)",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -204,13 +246,60 @@ const ImportBibliothequeModal: React.FC<ImportBibliothequeModalProps> = ({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="excel-file">Fichier Excel (.xlsx, .xls)</Label>
-                <Input
-                  id="excel-file"
-                  type="file"
-                  accept=".xlsx, .xls"
-                  onChange={handleFileChange}
-                />
+                <Label htmlFor="excel-file">Fichier Excel (.xlsx, .xls, .csv)</Label>
+                <div
+                  className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer transition-colors ${
+                    isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary/70'
+                  }`}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    id="excel-file"
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  
+                  {file ? (
+                    <div className="flex flex-col items-center">
+                      <div className="bg-green-100 rounded-full p-2 mb-2">
+                        <Upload className="h-6 w-6 text-green-600" />
+                      </div>
+                      <p className="font-medium">{file.name}</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFile(null);
+                        }}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Supprimer
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                      <p className="mt-2 text-sm font-medium">
+                        Glissez-déposez votre fichier ici ou cliquez pour sélectionner
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Supports: .xlsx, .xls, .csv
+                      </p>
+                    </>
+                  )}
+                </div>
                 <p className="text-xs text-gray-500">
                   Le fichier doit contenir les colonnes: designation, lot, subCategory, unite, prix_unitaire
                 </p>

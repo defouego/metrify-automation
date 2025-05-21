@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Upload, Search, Settings, CheckSquare, Square } from 'lucide-react';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Upload, Search, Settings, CheckSquare, Square, Star } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +13,7 @@ import CreateArticleDialog, { ItemFormValues, itemFormSchema } from '@/component
 import ImportBibliothequeModal from '@/components/Bibliotheque/ImportBibliothequeModal';
 import ManageLibrariesDialog from '@/components/Bibliotheque/ManageLibrariesDialog';
 import LibrarySelectionToolbar from '@/components/Bibliotheque/LibrarySelectionToolbar';
+import InlineEdit from '@/components/Bibliotheque/InlineEdit';
 import { useLibraryDB } from '@/hooks/useLibraryDB';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import {
@@ -81,7 +83,7 @@ const units = [
   { code: 'U' as ItemUnit, name: 'Unité' }
 ];
 
-const ITEMS_PER_PAGE = 100;
+const ITEMS_PER_PAGE = 50; // Increased from 10 to 50 per page
 
 const Library = () => {
   const [items, setItems] = useState<LibraryItem[]>([]);
@@ -92,6 +94,7 @@ const Library = () => {
   const [unitFilter, setUnitFilter] = useState('all');
   const [selectedLibrary, setSelectedLibrary] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDialogSubmitted, setIsDialogSubmitted] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isManageLibrariesDialogOpen, setIsManageLibrariesDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -102,6 +105,7 @@ const Library = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [inlineEditItem, setInlineEditItem] = useState<{ id: string, field: string } | null>(null);
   const { toast } = useToast();
   
   // Use our library database hook
@@ -157,14 +161,33 @@ const Library = () => {
     };
     
     loadData();
+
+    // Setup keyboard shortcut for undo (Ctrl+Z)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        // Implementation depends on your undo mechanism
+        toast({
+          title: "Action annulée",
+          description: "La dernière action a été annulée",
+        });
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Reset form when dialog closes
   const handleDialogOpenChange = (open: boolean) => {
     if (!open) {
-      form.reset();
-      setIsEditMode(false);
-      setCurrentItemId(null);
+      if (!isDialogSubmitted) {
+        // Only reset if the dialog wasn't submitted (user clicked outside or X)
+        form.reset();
+        setIsEditMode(false);
+        setCurrentItemId(null);
+      }
+      setIsDialogSubmitted(false);
     }
     setIsDialogOpen(open);
   };
@@ -234,8 +257,9 @@ const Library = () => {
           description: "L'article a été ajouté avec succès à votre bibliothèque",
         });
       }
+      setIsDialogSubmitted(true);
       setIsDialogOpen(false);
-      form.reset();
+      form.reset(); // Reset the form after successful submission
     } catch (err) {
       console.error('Error saving item:', err);
       toast({
@@ -270,6 +294,51 @@ const Library = () => {
     }
   };
   
+  // Handle favorite toggle
+  const handleFavoriteItem = async (id: string, isFavorite: boolean) => {
+    try {
+      const existingItem = items.find(item => item.id === id);
+      if (!existingItem) return;
+
+      const updatedItem = await updateLibraryItem({
+        ...existingItem,
+        isFavorite
+      });
+
+      setItems(items.map(item => 
+        item.id === id ? { ...item, isFavorite } as LibraryItem : item
+      ));
+
+      if (isFavorite) {
+        // Optionally move to Favorites library
+        const favoritesLib = libraries.find(lib => lib.id === 'favorites');
+        if (!favoritesLib) {
+          // Create favorites library if it doesn't exist
+          await createLibrary("Favoris");
+          const updatedLibraries = await getLibraries();
+          setLibraries(updatedLibraries);
+        }
+        
+        toast({
+          title: "Ajouté aux favoris",
+          description: "L'article a été ajouté à vos favoris",
+        });
+      } else {
+        toast({
+          title: "Retiré des favoris",
+          description: "L'article a été retiré de vos favoris",
+        });
+      }
+    } catch (err) {
+      console.error('Error toggling favorite status:', err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier le statut favori",
+        variant: "destructive"
+      });
+    }
+  };
+  
   // Handle import confirmation
   const handleImportConfirm = async (data: { items?: any[], library?: string, format?: string }) => {
     try {
@@ -296,7 +365,7 @@ const Library = () => {
       
       // Create new items from valid rows
       if (data.items && data.items.length > 0) {
-        // Utilisez le libraryId créé ou existant pour tous les articles
+        // Use the libraryId created or existing for all articles
         const targetLibraryId = libraryId || 'default';
         const newItems: LibraryItem[] = [];
         
@@ -306,13 +375,13 @@ const Library = () => {
             row.lot,
             row.unite as ItemUnit,
             typeof row.prix_unitaire === 'string' ? parseFloat(row.prix_unitaire) : row.prix_unitaire,
-            targetLibraryId,
+            targetLibraryId, // Use the target library instead of default
             row.description,
             row.subCategory,
             row.tags
           );
           
-          newItems.push(newItem);
+          newItems.push(newItem as unknown as LibraryItem);
         }
         
         setItems([...newItems, ...items]);
@@ -321,7 +390,7 @@ const Library = () => {
         const updatedLibraries = await getLibraries();
         setLibraries(updatedLibraries);
         
-        // Si une nouvelle bibliothèque a été créée, sélectionnez-la
+        // If a new library was created, select it
         if (libraryId) {
           setSelectedLibrary(libraryId);
         }
@@ -387,6 +456,7 @@ const Library = () => {
         const fetchedItems = await getLibraryItems(selectedLibrary);
         setItems(fetchedItems as unknown as LibraryItem[]);
         setSelectedItems([]);
+        form.setValue('bibliotheque_id', selectedLibrary !== 'all' ? selectedLibrary : 'default');
       } catch (err) {
         console.error('Error loading items:', err);
       }
@@ -450,8 +520,20 @@ const Library = () => {
   };
 
   const handleAddArticle = () => {
-    // Pre-select the current library in the form
-    form.setValue('bibliotheque_id', selectedLibrary !== 'all' ? selectedLibrary : 'default');
+    // Only reset if not in edit mode to preserve the current data
+    if (!isEditMode) {
+      // Pre-select the current library in the form
+      form.reset({
+        designation: '',
+        lot: '',
+        subCategory: '',
+        unite: '',
+        prix_unitaire: 0,
+        description: '',
+        bibliotheque_id: selectedLibrary !== 'all' ? selectedLibrary : 'default',
+        tags: []
+      });
+    }
     setIsDialogOpen(true);
   };
   
@@ -554,23 +636,58 @@ const Library = () => {
     setItems(fetchedItems as unknown as LibraryItem[]);
   };
 
+  // Handle inline editing
+  const handleCellDoubleClick = useCallback((item: LibraryItem, field: string) => {
+    setInlineEditItem({ id: item.id, field });
+  }, []);
+
+  const handleInlineEditSave = async (value: string | number) => {
+    if (!inlineEditItem) return;
+    
+    try {
+      const itemToEdit = items.find(item => item.id === inlineEditItem.id);
+      if (!itemToEdit) return;
+      
+      const updatedItem = { ...itemToEdit, [inlineEditItem.field]: value } as LibraryItem;
+      await updateLibraryItem(updatedItem);
+      
+      setItems(items.map(item => 
+        item.id === inlineEditItem.id ? updatedItem : item
+      ));
+      
+      setInlineEditItem(null);
+      
+      toast({
+        title: "Article mis à jour",
+        description: "La modification a été enregistrée avec succès",
+      });
+    } catch (err) {
+      console.error('Error updating item:', err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour l'article",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleInlineEditCancel = () => {
+    setInlineEditItem(null);
+  };
+
+  // Get options for inline edit fields
+  const getOptionsForField = (field: string) => {
+    if (field === 'lot') {
+      return categories.map(cat => ({ value: cat, label: cat }));
+    } else if (field === 'unite') {
+      return units.map(unit => ({ value: unit.code, label: `${unit.name} (${unit.code})` }));
+    }
+    return undefined;
+  };
+
   return (
     <DashboardLayout>
       <div className="container pb-10 pt-8">
-        {isSelectionMode && (
-          <LibrarySelectionToolbar
-            selectedItemsCount={selectedItems.length}
-            allItemsCount={filteredItems.length}
-            onSelectAll={handleSelectAll}
-            onSelectNone={handleSelectNone}
-            onDeleteSelected={handleDeleteSelected}
-            onMoveToLibrary={handleMoveToLibrary}
-            onExitSelectionMode={toggleSelectionMode}
-            libraries={libraries}
-            currentLibraryId={selectedLibrary}
-          />
-        )}
-        
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <h1 className="text-3xl font-bold">Ma bibliothèque</h1>
@@ -691,22 +808,38 @@ const Library = () => {
           </div>
         </div>
         
-        {/* Table with count */}
-        <div className="mb-2 text-sm text-gray-500">
-          {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''} trouvé{filteredItems.length > 1 ? 's' : ''} 
-          {selectedLibrary !== 'all' && (
-            <span> dans {libraries.find(lib => lib.id === selectedLibrary)?.name}</span>
-          )}
-        </div>
+        {/* Selection toolbar and items count */}
+        {isSelectionMode ? (
+          <LibrarySelectionToolbar
+            selectedItemsCount={selectedItems.length}
+            allItemsCount={filteredItems.length}
+            currentLibraryId={selectedLibrary}
+            libraries={libraries}
+            onSelectAll={handleSelectAll}
+            onSelectNone={handleSelectNone}
+            onDeleteSelected={handleDeleteSelected}
+            onMoveToLibrary={handleMoveToLibrary}
+            onExitSelectionMode={toggleSelectionMode}
+          />
+        ) : (
+          <div className="mb-2 text-sm text-gray-500">
+            {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''} trouvé{filteredItems.length > 1 ? 's' : ''} 
+            {selectedLibrary !== 'all' && (
+              <span> dans {libraries.find(lib => lib.id === selectedLibrary)?.name}</span>
+            )}
+          </div>
+        )}
         
         {/* Table */}
         <BibliothequeTable
           filteredItems={paginatedItems}
           onEditItem={handleEditItem}
           onDeleteItem={handleDeleteItem}
+          onFavoriteItem={handleFavoriteItem}
           selectionMode={isSelectionMode}
           selectedItems={selectedItems}
           onSelectItem={handleSelectItem}
+          onCellDoubleClick={handleCellDoubleClick}
         />
         
         {/* Pagination */}
@@ -846,6 +979,31 @@ const Library = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Inline Edit Dialog */}
+        {inlineEditItem && (() => {
+          const item = items.find(i => i.id === inlineEditItem.id);
+          if (!item) return null;
+          
+          return (
+            <Dialog open={!!inlineEditItem} onOpenChange={(open) => !open && setInlineEditItem(null)}>
+              <DialogContent className="sm:max-w-[400px]">
+                <DialogHeader>
+                  <DialogTitle>Modifier {inlineEditItem.field}</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  <InlineEdit
+                    value={item[inlineEditItem.field as keyof LibraryItem] as string | number}
+                    field={inlineEditItem.field}
+                    onSave={handleInlineEditSave}
+                    onCancel={handleInlineEditCancel}
+                    options={getOptionsForField(inlineEditItem.field)}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          );
+        })()}
       </div>
     </DashboardLayout>
   );

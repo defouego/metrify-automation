@@ -14,6 +14,7 @@ export interface LibraryItem {
   date_derniere_utilisation?: string;
   actif: boolean;
   isNew?: boolean;
+  isFavorite?: boolean;
   bibliotheque_id?: string;
   fichier_joint?: string;
 }
