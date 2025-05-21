@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Upload, Search, Settings, CheckSquare, Square, Star } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -178,20 +177,96 @@ const Library = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Filter items based on search and filters
+  const filteredByLibraryItems = items.filter(item => {
+    // Filter by library
+    if (selectedLibrary !== 'all' && item.bibliotheque_id !== selectedLibrary) {
+      return false;
+    }
+    return true;
+  });
+  
+  const filteredItems = filteredByLibraryItems.filter(item => {
+    // Search query filter
+    if (searchQuery && 
+        !item.designation.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !item.lot.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !item.subCategory.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    // Category filter
+    if (categoryFilter !== 'all' && item.lot !== categoryFilter) {
+      return false;
+    }
+    
+    // SubCategory filter
+    if (subCategoryFilter !== 'all' && item.subCategory !== subCategoryFilter) {
+      return false;
+    }
+    
+    // Unit filter
+    if (unitFilter !== 'all' && item.unite !== unitFilter) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  // Extract unique subCategories from items for filter
+  const uniqueSubCategories = Array.from(new Set(filteredByLibraryItems
+    .filter(item => item.subCategory)
+    .map(item => item.subCategory)));
+  
+  // Get unique units from items for filter
+  const uniqueUnits = Array.from(new Set(filteredByLibraryItems.map(item => item.unite)));
+  
+  // Calculate pagination
+  const pageCount = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedLibrary, searchQuery, categoryFilter, subCategoryFilter, unitFilter]);
+
+  const handleChangeLibrary = (value: string) => {
+    setSelectedLibrary(value);
+    // Update form default library
+    form.setValue('bibliotheque_id', value !== 'all' ? value : 'default');
+  };
+
+  const handleAddArticle = () => {
+    // Always reset the form when adding a new article
+    form.reset({
+      designation: '',
+      lot: '',
+      subCategory: '',
+      unite: '',
+      prix_unitaire: 0,
+      description: '',
+      bibliotheque_id: selectedLibrary !== 'all' ? selectedLibrary : 'default',
+      tags: []
+    });
+    setIsEditMode(false);
+    setCurrentItemId(null);
+    setIsDialogOpen(true);
+  };
+  
   // Reset form when dialog closes
   const handleDialogOpenChange = (open: boolean) => {
     if (!open) {
-      if (!isDialogSubmitted) {
-        // Only reset if the dialog wasn't submitted (user clicked outside or X)
-        form.reset();
-        setIsEditMode(false);
-        setCurrentItemId(null);
-      }
+      // Reset form when dialog is closed through X or clicking outside
       setIsDialogSubmitted(false);
+      setIsEditMode(false);
+      setCurrentItemId(null);
     }
     setIsDialogOpen(open);
   };
-
+  
   // Handle item edit
   const handleEditItem = (item: LibraryItem) => {
     form.reset({
@@ -465,79 +540,6 @@ const Library = () => {
     loadLibraryItems();
   }, [selectedLibrary]);
   
-  // Filter items based on search and filters
-  const filteredItems = items.filter(item => {
-    // Search query filter
-    if (searchQuery && 
-        !item.designation.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !item.lot.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !item.subCategory.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    
-    // Category filter
-    if (categoryFilter !== 'all' && item.lot !== categoryFilter) {
-      return false;
-    }
-    
-    // SubCategory filter
-    if (subCategoryFilter !== 'all' && item.subCategory !== subCategoryFilter) {
-      return false;
-    }
-    
-    // Unit filter
-    if (unitFilter !== 'all' && item.unite !== unitFilter) {
-      return false;
-    }
-    
-    return true;
-  });
-
-  // Extract unique subCategories from items for filter
-  const uniqueSubCategories = Array.from(new Set(items
-    .filter(item => item.subCategory)
-    .map(item => item.subCategory)));
-  
-  // Get unique units from items for filter
-  const uniqueUnits = Array.from(new Set(items.map(item => item.unite)));
-  
-  // Calculate pagination
-  const pageCount = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  // Reset to page 1 when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedLibrary, searchQuery, categoryFilter, subCategoryFilter, unitFilter]);
-
-  const handleChangeLibrary = (value: string) => {
-    setSelectedLibrary(value);
-    // Update form default library
-    form.setValue('bibliotheque_id', value !== 'all' ? value : 'default');
-  };
-
-  const handleAddArticle = () => {
-    // Only reset if not in edit mode to preserve the current data
-    if (!isEditMode) {
-      // Pre-select the current library in the form
-      form.reset({
-        designation: '',
-        lot: '',
-        subCategory: '',
-        unite: '',
-        prix_unitaire: 0,
-        description: '',
-        bibliotheque_id: selectedLibrary !== 'all' ? selectedLibrary : 'default',
-        tags: []
-      });
-    }
-    setIsDialogOpen(true);
-  };
-  
-  // Selection mode handlers
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
     setSelectedItems([]);
@@ -774,6 +776,7 @@ const Library = () => {
             categories={categories}
             uniqueSubCategories={uniqueSubCategories}
             uniqueUnits={uniqueUnits}
+            filteredByLibraryItems={filteredByLibraryItems}
           />
           
           <div className="flex gap-2">
