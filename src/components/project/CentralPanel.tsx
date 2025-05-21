@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { processUploadedDWG, highlightSimilarElements } from '@/utils/plan-utils';
 import PlanSelector from '@/components/project/PlanSelector';
 import PlanViewer from '@/components/project/PlanViewer';
+import { Upload } from 'lucide-react';
 
 interface CentralPanelProps {
   projet: Projet;
@@ -34,13 +35,12 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   hoveredElementId
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Handle file upload
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-    
-    const file = files[0];
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
     
     // Check if file is DWG
     if (!file.name.toLowerCase().endsWith('.dwg')) {
@@ -65,12 +65,59 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
     }
   };
   
+  // Handle file input change
+  const handleFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    await handleFileUpload(files[0]);
+    // Reset the file input value so the same file can be uploaded again if needed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
   // Trigger file input click
   const handleUploadClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
+
+  // Handle drag events
+  useEffect(() => {
+    const dropZone = dropZoneRef.current;
+    if (!dropZone) return;
+    
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+    };
+    
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+    };
+    
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        handleFileUpload(e.dataTransfer.files[0]);
+      }
+    };
+    
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('dragleave', handleDragLeave);
+    dropZone.addEventListener('drop', handleDrop);
+    
+    return () => {
+      dropZone.removeEventListener('dragover', handleDragOver);
+      dropZone.removeEventListener('dragleave', handleDragLeave);
+      dropZone.removeEventListener('drop', handleDrop);
+    };
+  }, []);
 
   // Handle plan selection
   const handleSelectPlan = (selectedPlan: Plan) => {
@@ -97,22 +144,25 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
       
       {/* Instructions for uploading plan if no plan is selected */}
       {!plan && !isCalibrating && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white">
+        <div 
+          ref={dropZoneRef}
+          className={`absolute inset-0 flex items-center justify-center bg-white ${
+            isDragging ? 'bg-blue-50 border-2 border-dashed border-blue-300' : ''
+          }`}
+        >
           <div className="text-center max-w-md mx-auto p-6">
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
+              <Upload className="h-8 w-8 text-primary" />
             </div>
             <h2 className="text-xl font-semibold mb-2 text-gray-800">Importer un plan</h2>
             <p className="text-gray-600 mb-6">
-              Commencez par importer votre plan au format DWG pour démarrer votre métré.
+              Glissez et déposez votre fichier DWG ici ou cliquez pour sélectionner un fichier.
             </p>
             <Button
               onClick={handleUploadClick}
               className="bg-metrBlue hover:bg-blue-800 text-white"
             >
-              Importer un plan DWG
+              Sélectionner un fichier DWG
             </Button>
           </div>
         </div>
@@ -123,7 +173,7 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
         type="file" 
         accept=".dwg" 
         className="hidden"
-        onChange={handleFileUpload}
+        onChange={handleFileInputChange}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import CalibrationGuide from '@/components/project/CalibrationGuide';
 import { CalibrationProvider, useCalibrationContext } from '@/contexts/CalibrationContext';
 import MeasurementProvider from '@/contexts/MeasurementContext';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 // Component principal enveloppé par les Providers
 const ProjectView = () => {
@@ -197,13 +198,13 @@ const ProjectViewContent = () => {
       
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel - hidden during calibration */}
-        <div className={`w-72 border-r transition-all duration-300 ${hidePanels ? 'hidden' : 'block'}`}>
+        {!hidePanels && (
           <LeftPanel 
             projet={projet}
             selectedSurface={selectedSurface}
             onAddOuvrage={handleAddOuvrage}
           />
-        </div>
+        )}
         
         {/* Central panel - expands during calibration */}
         <div className={`flex-1 transition-all duration-300 ${hidePanels ? 'w-full' : ''}`}>
@@ -222,14 +223,14 @@ const ProjectViewContent = () => {
         </div>
         
         {/* Right panel - hidden during calibration */}
-        <div className={`w-80 border-l transition-all duration-300 ${hidePanels ? 'hidden' : 'block'}`}>
+        {!hidePanels && (
           <RightPanel 
             projet={projet}
             onElementHover={setHoveredElementId}
             selectedSurface={selectedSurface}
             setSelectedSurface={setSelectedSurface}
           />
-        </div>
+        )}
       </div>
       
       {/* Calibration Dialog - Show for introduction (step 0) and instructions (step 1) */}

@@ -33,6 +33,13 @@ const BibliothequeTable: React.FC<BibliothequeTableProps> = ({
   const itemsToRender = filteredItems || [];
   const selected = selectedItems || [];
 
+  // Function to truncate text
+  const truncateText = (text: string, maxLength: number) => {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return `${text.substring(0, maxLength)}...`;
+  };
+
   return (
     <TooltipProvider>
       <div className="rounded-md border bg-white overflow-hidden">

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Filter, Tag } from 'lucide-react';
+import { Filter, Tag, Package, Ruler } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -24,6 +24,17 @@ interface BibliothequeFilterProps {
   setSelectedLibrary?: (library: string) => void;
   libraries?: {id: string, name: string}[];
   compact?: boolean;
+  // New props for customization
+  customLabels?: {
+    lot?: string;
+    subCategory?: string;
+    unit?: string;
+  };
+  customIcons?: {
+    lot?: React.ReactNode;
+    subCategory?: React.ReactNode;
+    unit?: React.ReactNode;
+  };
 }
 
 const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
@@ -40,12 +51,24 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
   selectedLibrary,
   setSelectedLibrary,
   libraries,
-  compact = false
+  compact = false,
+  customLabels = {},
+  customIcons = {}
 }) => {
   // Dynamic filtered options based on selections
   const [availableCategories, setAvailableCategories] = useState<string[]>(categories);
   const [availableSubCategories, setAvailableSubCategories] = useState<string[]>(uniqueSubCategories);
   const [availableUnits, setAvailableUnits] = useState<string[]>(uniqueUnits);
+
+  // Default icons if not provided
+  const lotIcon = customIcons.lot || <Package className="h-4 w-4 mr-2" />;
+  const subCategoryIcon = customIcons.subCategory || <Tag className="h-4 w-4 mr-2" />;
+  const unitIcon = customIcons.unit || <Ruler className="h-4 w-4 mr-2" />;
+
+  // Default labels if not provided
+  const lotLabel = customLabels.lot || (compact ? "Lot" : "Lot");
+  const subCategoryLabel = customLabels.subCategory || (compact ? "Cat." : "Sous-catégorie");
+  const unitLabel = customLabels.unit || (compact ? "Unit." : "Unité");
 
   // Update available sub-categories when category changes
   useEffect(() => {
@@ -127,7 +150,7 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Toutes les bibliothèques</SelectItem>
-                      {libraries.map(library => (
+                      {(libraries || []).map(library => (
                         <SelectItem key={library.id} value={library.id}>{library.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -136,13 +159,13 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
               )}
 
               <div>
-                <FormLabel>Lot</FormLabel>
+                <FormLabel>{lotLabel}</FormLabel>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Tous les lots" />
+                    <SelectValue placeholder={`Tous les ${lotLabel.toLowerCase()}`} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tous les lots</SelectItem>
+                    <SelectItem value="all">Tous les {lotLabel.toLowerCase()}</SelectItem>
                     {availableCategories.map(category => (
                       <SelectItem key={category} value={category}>{category}</SelectItem>
                     ))}
@@ -151,13 +174,13 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
               </div>
               
               <div>
-                <FormLabel>Sous-catégorie</FormLabel>
+                <FormLabel>{subCategoryLabel}</FormLabel>
                 <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Toutes les sous-catégories" />
+                    <SelectValue placeholder={`Toutes les ${subCategoryLabel.toLowerCase()}`} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Toutes les sous-catégories</SelectItem>
+                    <SelectItem value="all">Toutes les {subCategoryLabel.toLowerCase()}</SelectItem>
                     {availableSubCategories.map(subCategory => (
                       <SelectItem key={subCategory} value={subCategory}>{subCategory}</SelectItem>
                     ))}
@@ -166,13 +189,13 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
               </div>
               
               <div>
-                <FormLabel>Unité</FormLabel>
+                <FormLabel>{unitLabel}</FormLabel>
                 <Select value={unitFilter} onValueChange={setUnitFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Toutes les unités" />
+                    <SelectValue placeholder={`Toutes les ${unitLabel.toLowerCase()}`} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Toutes les unités</SelectItem>
+                    <SelectItem value="all">Toutes les {unitLabel.toLowerCase()}</SelectItem>
                     {availableUnits.map(unit => (
                       <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                     ))}
@@ -185,14 +208,14 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
         
         {/* Desktop filters */}
         <div className="hidden lg:flex lg:flex-row gap-2">
-          {libraries && setSelectedLibrary && (
+          {libraries && setSelectedLibrary && !compact && (
             <Select value={selectedLibrary || 'all'} onValueChange={setSelectedLibrary}>
               <SelectTrigger className={compact ? "w-[120px]" : "w-[180px]"}>
                 <SelectValue placeholder="Bibliothèque" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes les bibliothèques</SelectItem>
-                {libraries.map(library => (
+                {(libraries || []).map(library => (
                   <SelectItem key={library.id} value={library.id}>{library.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -201,10 +224,13 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className={compact ? "w-[90px]" : "w-[180px]"}>
-              <SelectValue placeholder={compact ? "Lot" : "Lot"} />
+              <div className="flex items-center">
+                {lotIcon}
+                <SelectValue placeholder={lotLabel} />
+              </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous les lots</SelectItem>
+              <SelectItem value="all">Tous les {lotLabel.toLowerCase()}</SelectItem>
               {availableCategories.map(category => (
                 <SelectItem key={category} value={category}>{category}</SelectItem>
               ))}
@@ -213,10 +239,13 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
           
           <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
             <SelectTrigger className={compact ? "w-[90px]" : "w-[150px]"}>
-              <SelectValue placeholder={compact ? "Cat." : "Sous-catégorie"} />
+              <div className="flex items-center">
+                {subCategoryIcon}
+                <SelectValue placeholder={subCategoryLabel} />
+              </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes les sous-catégories</SelectItem>
+              <SelectItem value="all">Toutes les {subCategoryLabel.toLowerCase()}</SelectItem>
               {availableSubCategories.map(subCategory => (
                 <SelectItem key={subCategory} value={subCategory}>{subCategory}</SelectItem>
               ))}
@@ -225,10 +254,13 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
           
           <Select value={unitFilter} onValueChange={setUnitFilter}>
             <SelectTrigger className={compact ? "w-[90px]" : "w-[150px]"}>
-              <SelectValue placeholder={compact ? "Unit." : "Unité"} />
+              <div className="flex items-center">
+                {unitIcon}
+                <SelectValue placeholder={unitLabel} />
+              </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes les unités</SelectItem>
+              <SelectItem value="all">Toutes les {unitLabel.toLowerCase()}</SelectItem>
               {availableUnits.map(unit => (
                 <SelectItem key={unit} value={unit}>{unit}</SelectItem>
               ))}
