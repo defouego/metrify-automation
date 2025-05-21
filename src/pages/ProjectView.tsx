@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Element, Plan, Projet, Surface } from '@/types/metr';
@@ -11,17 +12,20 @@ import ProjectLayout from '@/components/project/ProjectLayout';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import CalibrationGuide from '@/components/project/CalibrationGuide';
 import { CalibrationProvider, useCalibrationContext } from '@/contexts/CalibrationContext';
+import MeasurementProvider from '@/contexts/MeasurementContext';
 
-// Component principal enveloppé par le Provider
+// Component principal enveloppé par les Providers
 const ProjectView = () => {
   return (
     <CalibrationProvider>
-      <ProjectViewContent />
+      <MeasurementProvider>
+        <ProjectViewContent />
+      </MeasurementProvider>
     </CalibrationProvider>
   );
 };
 
-// Contenu principal qui utilise le contexte
+// Contenu principal qui utilise les contextes
 const ProjectViewContent = () => {
   const { id } = useParams();
   const [projet, setProjet] = useState<Projet | null>(null);
@@ -189,7 +193,6 @@ const ProjectViewContent = () => {
             projet={projet}
             selectedSurface={selectedSurface}
             onAddOuvrage={handleAddOuvrage}
-            onRemoveOuvrage={handleRemoveOuvrage}
           />
         </div>
         

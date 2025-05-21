@@ -1,15 +1,9 @@
-import React, { useState } from 'react';
-import { Ouvrage, Plan, Projet, Surface } from '@/types/metr';
+
+import React, { useState, useEffect } from 'react';
+import { Projet, Surface } from '@/types/metr';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from "@/components/ui/accordion";
-import { Search, Filter, Plus } from 'lucide-react';
+import { Search, Filter, Tag } from 'lucide-react';
 import { 
   Select, 
   SelectContent, 
@@ -17,261 +11,227 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import { LibraryItem, ItemUnit } from '@/types/library';
+import { useLibraryDB } from '@/hooks/useLibraryDB';
 
 interface LeftPanelProps {
   projet: Projet;
   selectedSurface: Surface | null;
-  onAddOuvrage: (ouvrage: Ouvrage) => void;
-  onRemoveOuvrage: (ouvrageId: string) => void;
+  onAddOuvrage: (ouvrage: any) => void;
 }
 
-const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuvrage, onRemoveOuvrage }) => {
+const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuvrage }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLot, setSelectedLot] = useState<string | null>(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
-  const [selectedLibrary, setSelectedLibrary] = useState('all');
+  const [items, setItems] = useState<LibraryItem[]>([]);
   
-  // Sample ouvrages library for demonstration
-  const ouvragesLibrary: Omit<Ouvrage, 'id' | 'localisation'>[] = [
-    { designation: "Carrelage grès cérame 60x60", lot: "Revêtements de sol", quantite: 0, unite: "m²", prix_unitaire: 45 },
-    { designation: "Peinture acrylique mate", lot: "Peinture", quantite: 0, unite: "m²", prix_unitaire: 12 },
-    { designation: "Doublage placoplâtre BA13", lot: "Plâtrerie", quantite: 0, unite: "m²", prix_unitaire: 28 },
-    { designation: "Isolant laine de verre 100mm", lot: "Isolation", quantite: 0, unite: "m²", prix_unitaire: 18 },
-    { designation: "Pose porte intérieure", lot: "Menuiseries", quantite: 0, unite: "u", prix_unitaire: 180 },
-    { designation: "Pose fenêtre double vitrage", lot: "Menuiseries", quantite: 0, unite: "u", prix_unitaire: 350 }
-  ];
+  // Use our library database hook
+  const {
+    isLoading,
+    getLibraryItems,
+    initializeWithSampleData
+  } = useLibraryDB();
   
-  // Sample libraries for demonstration
-  const libraries = [
-    { id: 'all', name: 'Tous les articles', itemCount: ouvragesLibrary.length },
-    { id: 'default', name: 'Bibliothèque par défaut', itemCount: 3 },
-    { id: 'ATTIC+', name: 'ATTIC+', itemCount: 1 },
-    { id: 'BatiMat 2023', name: 'BatiMat 2023', itemCount: 2 }
-  ];
-  
+  // Load library items
+  useEffect(() => {
+    const loadItems = async () => {
+      try {
+        await initializeWithSampleData();
+        const fetchedItems = await getLibraryItems();
+        setItems(fetchedItems as unknown as LibraryItem[]);
+      } catch (err) {
+        console.error('Error loading library items:', err);
+      }
+    };
+    
+    loadItems();
+  }, []);
+
   // Get unique lots from the library
-  const uniqueLots = [...new Set(ouvragesLibrary.map(o => o.lot))];
+  const uniqueLots = [...new Set(items.map(o => o.lot))];
   
-  // Create a fake category for items based on lot instead of using 'type'
-  const ouvrageCategories = ouvragesLibrary.map(o => o.lot);
-  const uniqueCategories = [...new Set(ouvrageCategories)].filter(Boolean);
+  // Get unique subCategories from the library
+  const uniqueSubCategories = [...new Set(items
+    .filter(item => item.subCategory)
+    .map(item => item.subCategory))];
   
   // Get unique units from the library
-  const uniqueUnits = [...new Set(ouvragesLibrary.map(o => o.unite))];
+  const uniqueUnits = [...new Set(items.map(item => item.unite))];
   
-  // Filter ouvrages based on search term and selected filters
-  const filteredOuvrages = ouvragesLibrary.filter(ouvrage => {
-    const matchesSearch = ouvrage.designation.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLot = selectedLot ? ouvrage.lot === selectedLot : true;
-    const matchesUnit = selectedUnit ? ouvrage.unite === selectedUnit : true;
-    return matchesSearch && matchesLot && matchesUnit;
+  // Filter items based on search term and selected filters
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.designation.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesLot = selectedLot ? item.lot === selectedLot : true;
+    const matchesSubCategory = selectedSubCategory ? item.subCategory === selectedSubCategory : true;
+    const matchesUnit = selectedUnit ? item.unite === selectedUnit : true;
+    return matchesSearch && matchesLot && matchesSubCategory && matchesUnit;
   });
-  
-  // Add an ouvrage to the project
-  const handleAddOuvrage = (ouvrageTemplate: Omit<Ouvrage, 'id' | 'localisation'>) => {
+
+  // Add an item to the project
+  const handleAddItem = (item: LibraryItem) => {
     const localisation = selectedSurface 
       ? { niveau: "Actuel", piece: selectedSurface.nom } 
       : { niveau: "RDC", piece: "Salon" };
     
     // Set the quantity based on surface area if applicable
-    const quantite = selectedSurface && ouvrageTemplate.unite === "m²" 
-      ? selectedSurface.superficie 
-      : ouvrageTemplate.quantite || 1;
+    let quantite = 1;
+    if (selectedSurface && item.unite === "M2") {
+      quantite = selectedSurface.superficie;
+    }
       
-    const newOuvrage: Ouvrage = {
-      ...ouvrageTemplate,
+    const newOuvrage = {
       id: `ouvrage-${Date.now()}`,
+      designation: item.designation,
+      lot: item.lot,
+      subCategory: item.subCategory,
       quantite: quantite,
-      localisation: localisation
+      unite: item.unite,
+      prix_unitaire: item.prix_unitaire,
+      localisation: localisation,
+      surfaceId: selectedSurface?.id
     };
     
     onAddOuvrage(newOuvrage);
   };
-  
-  // Group project ouvrages by niveau and piece
-  const groupedOuvrages: Record<string, Record<string, Ouvrage[]>> = {};
-  
-  projet.ouvrages.forEach(ouvrage => {
-    const { niveau, piece } = ouvrage.localisation;
-    
-    if (!groupedOuvrages[niveau]) {
-      groupedOuvrages[niveau] = {};
+
+  // Function to determine what type of measurement is needed based on unit
+  const getMeasurementType = (unit: ItemUnit): string => {
+    switch (unit) {
+      case 'ML':
+        return 'linear';
+      case 'M2':
+        return 'area';
+      case 'U':
+      case 'PCE':
+        return 'count';
+      default:
+        return 'manual';
     }
-    
-    if (!groupedOuvrages[niveau][piece]) {
-      groupedOuvrages[niveau][piece] = [];
-    }
-    
-    groupedOuvrages[niveau][piece].push(ouvrage);
-  });
+  };
   
   return (
     <div className="sidebar w-full flex flex-col h-full">
-      <Tabs defaultValue="ouvrages" className="w-full">
-        <TabsList className="grid grid-cols-2 mb-2">
-          <TabsTrigger value="ouvrages">Ouvrages</TabsTrigger>
-          <TabsTrigger value="bibliotheque">Bibliothèque</TabsTrigger>
-        </TabsList>
+      <div className="p-2">
+        <h2 className="w-full text-center text-lg font-semibold mb-4 text-primary">Bibliothèque</h2>
         
-        {/* Project Ouvrages Tab */}
-        <TabsContent value="ouvrages" className="h-[calc(100vh-120px)] overflow-auto">
-          <div className="p-2">
-            <h2 className="w-full text-center text-lg font-semibold mb-2 text-primary">Ouvrages du projet</h2>
-            
-            {selectedSurface && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
-                <h3 className="text-sm font-medium text-primary">Surface sélectionnée</h3>
-                <p className="text-xs text-gray-600">{selectedSurface.nom} ({selectedSurface.superficie.toFixed(2)} {selectedSurface.unite})</p>
-                <p className="text-xs text-gray-500 mt-1">Les ouvrages ajoutés seront associés à cette surface</p>
-              </div>
-            )}
-            
-            {Object.keys(groupedOuvrages).length > 0 ? (
-              <Accordion type="multiple" className="w-full">
-                {Object.entries(groupedOuvrages).map(([niveau, pieces]) => (
-                  <AccordionItem key={niveau} value={niveau}>
-                    <AccordionTrigger className="font-medium text-sm">
-                      {niveau}
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Accordion type="multiple" className="pl-2">
-                        {Object.entries(pieces).map(([piece, ouvrages]) => (
-                          <AccordionItem key={piece} value={`${niveau}-${piece}`}>
-                            <AccordionTrigger className="text-sm">{piece}</AccordionTrigger>
-                            <AccordionContent>
-                              <ul className="space-y-2">
-                                {ouvrages.map(ouvrage => (
-                                  <li key={ouvrage.id} className="bg-gray-50 p-2 rounded-md text-sm">
-                                    <div className="flex justify-between items-start">
-                                      <div>
-                                        <p className="font-medium">{ouvrage.designation}</p>
-                                        <p className="text-xs text-gray-500">{ouvrage.lot}</p>
-                                        <div className="flex space-x-4 mt-1 text-xs">
-                                          <span>{ouvrage.quantite} {ouvrage.unite}</span>
-                                          <span>{ouvrage.prix_unitaire} €/{ouvrage.unite}</span>
-                                          <span className="font-medium">{ouvrage.quantite * ouvrage.prix_unitaire} €</span>
-                                        </div>
-                                      </div>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-6 w-6 p-0 text-red-500"
-                                        onClick={() => onRemoveOuvrage(ouvrage.id)}
-                                      >
-                                        <span className="sr-only">Supprimer</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                                      </Button>
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            ) : (
-              <p className="text-sm text-gray-500 p-4 text-center">
-                Aucun ouvrage ajouté. Sélectionnez une zone sur le plan et ajoutez des ouvrages depuis la bibliothèque.
-              </p>
-            )}
+        {selectedSurface && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
+            <h3 className="text-sm font-medium text-primary">Surface sélectionnée</h3>
+            <p className="text-xs text-gray-600">{selectedSurface.nom} ({selectedSurface.superficie.toFixed(2)} {selectedSurface.unite})</p>
+            <p className="text-xs text-gray-500 mt-1">Les ouvrages ajoutés seront associés à cette surface</p>
           </div>
-        </TabsContent>
+        )}
         
-        {/* Library Tab */}
-        <TabsContent value="bibliotheque" className="h-[calc(100vh-120px)] overflow-auto">
-          <div className="p-2 space-y-4">
-            {/* Library selector */}
-            <div className="mb-2">
-              <Select value={selectedLibrary} onValueChange={setSelectedLibrary}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner une bibliothèque" />
-                </SelectTrigger>
-                <SelectContent>
-                  {libraries.map(library => (
-                    <SelectItem key={library.id} value={library.id}>
-                      {library.name} ({library.itemCount} articles)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Rechercher un ouvrage..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+        <div className="space-y-3">
+          {/* Search input */}
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Rechercher un article..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          {/* Filter buttons with icons */}
+          <div className="flex items-center space-x-2">
+            {/* Lot filter */}
+            <Select 
+              value={selectedLot || 'all'} 
+              onValueChange={(value) => setSelectedLot(value === 'all' ? null : value)}
+            >
+              <SelectTrigger className="h-8 w-28">
+                <div className="flex items-center">
+                  <Filter className="h-4 w-4 mr-1" />
+                  <span>Lot</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les lots</SelectItem>
+                {uniqueLots.map(lot => (
+                  <SelectItem key={lot} value={lot}>{lot}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             
-            <div className="flex flex-wrap gap-2">
-              {/* Lot filter */}
-              <Select 
-                value={selectedLot || 'all'} 
-                onValueChange={(value) => setSelectedLot(value === 'all' ? null : value)}
-              >
-                <SelectTrigger className="w-full md:w-auto">
-                  <SelectValue placeholder="Lot" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les lots</SelectItem>
-                  {uniqueLots.map(lot => (
-                    <SelectItem key={lot} value={lot}>{lot}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {/* Unit filter */}
-              <Select 
-                value={selectedUnit || 'all'} 
-                onValueChange={(value) => setSelectedUnit(value === 'all' ? null : value)}
-              >
-                <SelectTrigger className="w-full md:w-auto">
-                  <SelectValue placeholder="Unité" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les unités</SelectItem>
-                  {uniqueUnits.map(unit => (
-                    <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* SubCategory filter */}
+            <Select 
+              value={selectedSubCategory || 'all'} 
+              onValueChange={(value) => setSelectedSubCategory(value === 'all' ? null : value)}
+            >
+              <SelectTrigger className="h-8 w-28">
+                <div className="flex items-center">
+                  <Tag className="h-4 w-4 mr-1" />
+                  <span>Sous-cat.</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                {uniqueSubCategories.map(subCategory => (
+                  <SelectItem key={subCategory} value={subCategory}>{subCategory}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-gray-700">Ouvrages disponibles</h3>
-              <ul className="space-y-2">
-                {filteredOuvrages.map((ouvrage, index) => (
-                  <li key={index} className="bg-white border rounded-md p-2 shadow-sm hover:shadow-md transition-shadow">
+            {/* Unit filter */}
+            <Select 
+              value={selectedUnit || 'all'} 
+              onValueChange={(value) => setSelectedUnit(value === 'all' ? null : value)}
+            >
+              <SelectTrigger className="h-8 w-28">
+                <div className="flex items-center">
+                  <Tag className="h-4 w-4 mr-1" />
+                  <span>Unité</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                {uniqueUnits.map(unit => (
+                  <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Library items list */}
+          <div className="space-y-2 mt-4 h-[calc(100vh-260px)] overflow-y-auto">
+            <h3 className="text-sm font-medium text-gray-700">Articles disponibles</h3>
+            
+            {isLoading ? (
+              <p className="text-sm text-center py-8 text-gray-500">Chargement des articles...</p>
+            ) : filteredItems.length > 0 ? (
+              <ul className="space-y-1">
+                {filteredItems.map((item) => (
+                  <li key={item.id} className="bg-white border rounded-md p-2 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-medium text-sm">{ouvrage.designation}</p>
-                        <p className="text-xs text-gray-500">{ouvrage.lot}</p>
-                        <p className="text-xs mt-1">{ouvrage.prix_unitaire} €/{ouvrage.unite}</p>
+                        <p className="font-medium text-sm">{item.designation}</p>
+                        <p className="text-xs text-gray-500">{item.lot} - {item.subCategory}</p>
+                        <p className="text-xs mt-1">{item.prix_unitaire.toFixed(2)} €/{item.unite}</p>
                       </div>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-8 w-8 p-0 rounded-full bg-metrBlue text-white hover:bg-blue-800"
-                        onClick={() => handleAddOuvrage(ouvrage)}
+                        className="h-7 w-7 p-0 rounded-full bg-metrBlue text-white hover:bg-blue-800"
+                        onClick={() => handleAddItem(item)}
+                        title={`Ajouter et mesurer (${getMeasurementType(item.unite)})`}
                       >
-                        <Plus className="h-4 w-4" />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         <span className="sr-only">Ajouter</span>
                       </Button>
                     </div>
                   </li>
                 ))}
               </ul>
-            </div>
+            ) : (
+              <p className="text-sm text-center py-8 text-gray-500">Aucun article trouvé avec ces critères de recherche.</p>
+            )}
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 };
