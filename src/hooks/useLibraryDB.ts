@@ -90,7 +90,7 @@ export function useLibraryDB() {
     prix_unitaire: number,
     bibliotheque_id: string = 'default',
     description?: string,
-    subCategory: string = 'Non spécifié', // Changé de type à subCategory
+    subCategory: string = 'Non spécifié',
     tags?: string[]
   ): Promise<LibraryItem> => {
     setIsLoading(true);
@@ -101,7 +101,7 @@ export function useLibraryDB() {
         id: generateId(),
         designation,
         lot,
-        subCategory, // Maintenant obligatoire
+        subCategory,
         unite,
         prix_unitaire,
         description,
@@ -365,7 +365,7 @@ export function useLibraryDB() {
           await storage.addLibrary(library);
         }
         
-        // Import sample items avec subCategory au lieu de type
+        // Import sample items avec subCategory
         const sampleItems: Omit<LibraryItem, 'id'>[] = [
           { 
             designation: 'Béton de fondation', 
@@ -463,8 +463,8 @@ export function useLibraryDB() {
     createLibraryItem,
     updateLibraryItem,
     deleteLibraryItem,
-    deleteLibraryItems, // Nouvelle méthode
-    moveItemsToLibrary, // Nouvelle méthode
+    deleteLibraryItems,
+    moveItemsToLibrary,
     getLibraryItems,
     // Initialization
     initializeWithSampleData

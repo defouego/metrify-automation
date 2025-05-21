@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Upload, Search, Settings, CheckSquare, Square } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -146,7 +145,7 @@ const Library = () => {
         setLibraries(fetchedLibraries);
         
         const fetchedItems = await getLibraryItems();
-        setItems(fetchedItems);
+        setItems(fetchedItems as unknown as LibraryItem[]);
       } catch (err) {
         console.error('Error loading data:', err);
         toast({
@@ -204,7 +203,7 @@ const Library = () => {
             bibliotheque_id: values.bibliotheque_id
           });
           
-          setItems(items.map(item => item.id === currentItemId ? updatedItem : item));
+          setItems(items.map(item => item.id === currentItemId ? updatedItem as unknown as LibraryItem : item));
           
           toast({
             title: "Article mis à jour",
@@ -224,7 +223,7 @@ const Library = () => {
           values.tags
         );
         
-        setItems([newItem, ...items]);
+        setItems([newItem as unknown as LibraryItem, ...items]);
         
         // Update library list to refresh item counts
         const updatedLibraries = await getLibraries();
@@ -386,7 +385,7 @@ const Library = () => {
     const loadLibraryItems = async () => {
       try {
         const fetchedItems = await getLibraryItems(selectedLibrary);
-        setItems(fetchedItems);
+        setItems(fetchedItems as unknown as LibraryItem[]);
         setSelectedItems([]);
       } catch (err) {
         console.error('Error loading items:', err);
@@ -490,7 +489,7 @@ const Library = () => {
       
       // Refresh items and libraries
       const fetchedItems = await getLibraryItems(selectedLibrary);
-      setItems(fetchedItems);
+      setItems(fetchedItems as unknown as LibraryItem[]);
       
       const updatedLibraries = await getLibraries();
       setLibraries(updatedLibraries);
@@ -520,7 +519,7 @@ const Library = () => {
       
       // Refresh items and libraries
       const fetchedItems = await getLibraryItems(selectedLibrary);
-      setItems(fetchedItems);
+      setItems(fetchedItems as unknown as LibraryItem[]);
       
       const updatedLibraries = await getLibraries();
       setLibraries(updatedLibraries);
@@ -552,7 +551,7 @@ const Library = () => {
     setLibraries(updatedLibraries);
     
     const fetchedItems = await getLibraryItems(selectedLibrary);
-    setItems(fetchedItems);
+    setItems(fetchedItems as unknown as LibraryItem[]);
   };
 
   return (
