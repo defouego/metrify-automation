@@ -29,6 +29,10 @@ const BibliothequeTable: React.FC<BibliothequeTableProps> = ({
   onSelectItem,
   onCellDoubleClick
 }) => {
+  // Add safety check for filteredItems and selectedItems
+  const itemsToRender = filteredItems || [];
+  const selected = selectedItems || [];
+
   return (
     <TooltipProvider>
       <div className="rounded-md border bg-white overflow-hidden">
@@ -46,15 +50,15 @@ const BibliothequeTable: React.FC<BibliothequeTableProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredItems.length > 0 ? (
-              filteredItems.map((item) => (
+            {itemsToRender.length > 0 ? (
+              itemsToRender.map((item) => (
                 <TableRow 
                   key={item.id} 
-                  className={`group transition-colors hover:bg-gray-50 ${selectedItems.includes(item.id) ? 'bg-blue-50' : ''} h-10`}
+                  className={`group transition-colors hover:bg-gray-50 ${selected.includes(item.id) ? 'bg-blue-50' : ''} h-10`}
                 >
                   <TableCell className="p-2 w-[30px]">
                     <Checkbox 
-                      checked={selectedItems.includes(item.id)} 
+                      checked={selected.includes(item.id)} 
                       onCheckedChange={(checked) => onSelectItem(item.id, !!checked)}
                       className="ml-1"
                     />

@@ -31,7 +31,10 @@ const RightPanel: React.FC<RightPanelProps> = ({
     // Group ouvrages by lot and subcategory
     const grouped: {[key: string]: {[key: string]: OuvrageType[]}} = {};
     
-    projet.ouvrages.forEach(ouvrage => {
+    // Add safety check for projet.ouvrages
+    const ouvrages = projet?.ouvrages || [];
+    
+    ouvrages.forEach(ouvrage => {
       if (!grouped[ouvrage.lot]) {
         grouped[ouvrage.lot] = {};
       }
@@ -52,7 +55,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
     if (expandedLots.length === 0 && Object.keys(grouped).length > 0) {
       setExpandedLots([Object.keys(grouped)[0]]);
     }
-  }, [projet.ouvrages]);
+  }, [projet?.ouvrages]); // Add ? to prevent accessing ouvrages if projet is undefined
   
   const toggleLot = (lot: string) => {
     if (expandedLots.includes(lot)) {
@@ -74,7 +77,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
   const getLotTotal = (lot: string) => {
     let total = 0;
     Object.keys(ouvragesGrouped[lot] || {}).forEach(subCat => {
-      ouvragesGrouped[lot][subCat].forEach(ouvrage => {
+      (ouvragesGrouped[lot][subCat] || []).forEach(ouvrage => {
         total += ouvrage.quantite * ouvrage.prix_unitaire;
       });
     });
@@ -194,7 +197,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                   
                   {expandedLots.includes(lot) && (
                     <div className="p-2 space-y-2">
-                      {Object.keys(ouvragesGrouped[lot]).map(subCategory => (
+                      {Object.keys(ouvragesGrouped[lot] || {}).map(subCategory => (
                         <div key={`${lot}-${subCategory}`} className="border rounded-md overflow-hidden">
                           <div 
                             className="bg-gray-50 p-2 flex justify-between items-center cursor-pointer hover:bg-gray-100"
@@ -228,13 +231,13 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                 </tr>
                               </thead>
                               <tbody>
-                                {ouvragesGrouped[lot][subCategory].map((ouvrage, idx) => (
+                                {(ouvragesGrouped[lot][subCategory] || []).map((ouvrage, idx) => (
                                   <tr key={ouvrage.id} className="border-t hover:bg-gray-50">
                                     <td className="p-2">
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <span className="truncate max-w-[150px] inline-block">
-                                            {truncateText(ouvrage.designation, 25)}
+                                            {truncateText(ouvrage.designation || '', 25)}
                                           </span>
                                         </TooltipTrigger>
                                         <TooltipContent>

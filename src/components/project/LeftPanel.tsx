@@ -45,12 +45,15 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
       try {
         await initializeWithSampleData();
         const fetchedLibraries = await getLibraries();
-        setLibraries(fetchedLibraries);
+        setLibraries(fetchedLibraries || []);
         
         const fetchedItems = await getLibraryItems();
-        setItems(fetchedItems as unknown as LibraryItem[]);
+        setItems(fetchedItems as unknown as LibraryItem[] || []);
       } catch (err) {
         console.error('Error loading data:', err);
+        // Set empty arrays as fallback
+        setLibraries([]);
+        setItems([]);
       }
     };
     
@@ -62,28 +65,29 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
     const loadLibraryItems = async () => {
       try {
         const fetchedItems = await getLibraryItems(selectedLibrary);
-        setItems(fetchedItems as unknown as LibraryItem[]);
+        setItems(fetchedItems as unknown as LibraryItem[] || []);
       } catch (err) {
         console.error('Error loading items:', err);
+        setItems([]);
       }
     };
     
     loadLibraryItems();
   }, [selectedLibrary]);
 
-  // Get unique lots from the library
-  const uniqueLots = [...new Set(items.map(o => o.lot))];
+  // Get unique lots from the library - add safety check for items
+  const uniqueLots = [...new Set((items || []).map(o => o.lot))];
   
-  // Get unique subCategories from the library
-  const uniqueSubCategories = [...new Set(items
+  // Get unique subCategories from the library - add safety check for items and subCategory
+  const uniqueSubCategories = [...new Set((items || [])
     .filter(item => item.subCategory)
     .map(item => item.subCategory))];
   
-  // Get unique units from the library
-  const uniqueUnits = [...new Set(items.map(item => item.unite))];
+  // Get unique units from the library - add safety check for items
+  const uniqueUnits = [...new Set((items || []).map(item => item.unite))];
   
-  // Filter items based on search term and selected filters
-  const filteredItems = items.filter(item => {
+  // Filter items based on search term and selected filters - add safety check for items
+  const filteredItems = (items || []).filter(item => {
     const matchesSearch = item.designation.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLot = selectedLot === 'all' ? true : item.lot === selectedLot;
     const matchesSubCategory = selectedSubCategory === 'all' ? true : item.subCategory === selectedSubCategory;
@@ -135,6 +139,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   
   // Function to truncate text
   const truncateText = (text: string, maxLength: number) => {
+    if (!text) return '';
     if (text.length <= maxLength) return text;
     return `${text.substring(0, maxLength)}...`;
   };
@@ -176,10 +181,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
               categories={uniqueLots}
               uniqueSubCategories={uniqueSubCategories}
               uniqueUnits={uniqueUnits}
-              filteredByLibraryItems={items}
+              filteredByLibraryItems={items || []}
               selectedLibrary={selectedLibrary}
               setSelectedLibrary={setSelectedLibrary}
-              libraries={libraries}
+              libraries={libraries || []}
               compact={true}
             />
             
@@ -207,7 +212,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
                           <div className="flex justify-between text-xs text-gray-500">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="truncate max-w-[120px]">{truncateText(item.lot, 15)} - {truncateText(item.subCategory, 10)}</span>
+                                <span className="truncate max-w-[120px]">
+                                  {truncateText(item.lot || '', 15)} - {truncateText(item.subCategory || '', 10)}
+                                </span>
                               </TooltipTrigger>
                               <TooltipContent>
                                 {item.lot} - {item.subCategory}

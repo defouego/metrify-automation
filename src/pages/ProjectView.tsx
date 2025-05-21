@@ -80,8 +80,8 @@ const ProjectViewContent = () => {
     
     const updatedProjet = {
       ...projet,
-      plans: [...projet.plans, newPlan],
-      currentPlanIndex: projet.plans.length,
+      plans: [...(projet.plans || []), newPlan],  // Add safety check for plans
+      currentPlanIndex: (projet.plans || []).length,  // Add safety check for plans
     };
     
     setProjet(updatedProjet);
@@ -101,26 +101,30 @@ const ProjectViewContent = () => {
   const handleAddOuvrage = (ouvrage: any) => {
     if (!projet) return;
     
+    // Initialize empty arrays if they don't exist
+    const projectOuvrages = projet.ouvrages || [];
+    const projectSurfaces = projet.surfaces || [];
+    
     // If the ouvrage is associated with a surface, update surface's ouvragesIds
     if (selectedSurface && ouvrage.surfaceId) {
-      const updatedSurfaces = projet.surfaces?.map(surface => 
+      const updatedSurfaces = projectSurfaces.map(surface => 
         surface.id === selectedSurface.id
           ? { 
               ...surface, 
               ouvragesIds: [...(surface.ouvragesIds || []), ouvrage.id] 
             }
           : surface
-      ) || [];
+      );
       
       setProjet({
         ...projet,
-        ouvrages: [...projet.ouvrages, ouvrage],
+        ouvrages: [...projectOuvrages, ouvrage],
         surfaces: updatedSurfaces,
       });
     } else {
       setProjet({
         ...projet,
-        ouvrages: [...projet.ouvrages, ouvrage],
+        ouvrages: [...projectOuvrages, ouvrage],
       });
     }
   };
@@ -129,15 +133,19 @@ const ProjectViewContent = () => {
   const handleRemoveOuvrage = (ouvrageId: string) => {
     if (!projet) return;
     
+    // Initialize empty arrays if they don't exist
+    const projectOuvrages = projet.ouvrages || [];
+    const projectSurfaces = projet.surfaces || [];
+    
     // Also remove the ouvrage from any surface that references it
-    const updatedSurfaces = projet.surfaces?.map(surface => ({
+    const updatedSurfaces = projectSurfaces.map(surface => ({
       ...surface,
-      ouvragesIds: surface.ouvragesIds.filter(id => id !== ouvrageId)
-    })) || [];
+      ouvragesIds: (surface.ouvragesIds || []).filter(id => id !== ouvrageId)
+    }));
     
     setProjet({
       ...projet,
-      ouvrages: projet.ouvrages.filter(o => o.id !== ouvrageId),
+      ouvrages: projectOuvrages.filter(o => o.id !== ouvrageId),
       surfaces: updatedSurfaces,
     });
   };
@@ -146,7 +154,8 @@ const ProjectViewContent = () => {
   const handleElementSelected = (element: Element) => {
     // When a room (piece) is selected, create or select a surface for it
     if (element.type === 'piece') {
-      const existingSurface = projet?.surfaces?.find(s => s.pieceId === element.id);
+      const projectSurfaces = projet?.surfaces || [];
+      const existingSurface = projectSurfaces.find(s => s.pieceId === element.id);
       
       if (existingSurface) {
         setSelectedSurface(existingSurface);
@@ -155,14 +164,14 @@ const ProjectViewContent = () => {
         const newSurface: Surface = {
           id: `surface-${Date.now()}`,
           pieceId: element.id,
-          nom: `Pièce ${projet.surfaces?.length ? projet.surfaces.length + 1 : 1}`,
+          nom: `Pièce ${projectSurfaces.length ? projectSurfaces.length + 1 : 1}`,
           type: 'sol',
           superficie: ((element.width || 0) * (element.height || 0)) / 10000, // Convert to m²
           unite: 'm²',
           ouvragesIds: [],
         };
         
-        const updatedSurfaces = [...(projet.surfaces || []), newSurface];
+        const updatedSurfaces = [...projectSurfaces, newSurface];
         
         setProjet({
           ...projet,
