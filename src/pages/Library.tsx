@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Plus, Upload, Search } from 'lucide-react';
+import { Plus, Upload, Search, Settings, CheckSquare, Square } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +11,10 @@ import BibliothequeFilter from '@/components/Bibliotheque/BibliothequeFilter';
 import BibliothequeTable from '@/components/Bibliotheque/BibliothequeTable';
 import CreateArticleDialog, { ItemFormValues, itemFormSchema } from '@/components/Bibliotheque/CreateArticleDialog';
 import ImportBibliothequeModal from '@/components/Bibliotheque/ImportBibliothequeModal';
+import ManageLibrariesDialog from '@/components/Bibliotheque/ManageLibrariesDialog';
+import LibrarySelectionToolbar from '@/components/Bibliotheque/LibrarySelectionToolbar';
 import { useLibraryDB } from '@/hooks/useLibraryDB';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -85,16 +89,20 @@ const Library = () => {
   const [libraries, setLibraries] = useState<LibraryType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [subCategoryFilter, setSubCategoryFilter] = useState('all');
   const [unitFilter, setUnitFilter] = useState('all');
   const [selectedLibrary, setSelectedLibrary] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isManageLibrariesDialogOpen, setIsManageLibrariesDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isNewLibraryDialogOpen, setIsNewLibraryDialogOpen] = useState(false);
   const [newLibraryName, setNewLibraryName] = useState('');
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const { toast } = useToast();
   
   // Use our library database hook
@@ -108,6 +116,8 @@ const Library = () => {
     createLibraryItem,
     updateLibraryItem,
     deleteLibraryItem,
+    deleteLibraryItems,
+    moveItemsToLibrary,
     getLibraryItems,
     initializeWithSampleData
   } = useLibraryDB();
@@ -119,7 +129,6 @@ const Library = () => {
       designation: '',
       lot: '',
       subCategory: '',
-      type: '',
       unite: '',
       prix_unitaire: 0,
       description: '',
@@ -166,8 +175,7 @@ const Library = () => {
     form.reset({
       designation: item.designation,
       lot: item.lot,
-      subCategory: item.subCategory || '',
-      type: item.type || '',
+      subCategory: item.subCategory,
       unite: item.unite,
       prix_unitaire: item.prix_unitaire,
       description: item.description || '',
@@ -190,7 +198,6 @@ const Library = () => {
             designation: values.designation,
             lot: values.lot,
             subCategory: values.subCategory,
-            type: values.type,
             unite: values.unite as ItemUnit,
             prix_unitaire: values.prix_unitaire,
             description: values.description,
@@ -268,8 +275,20 @@ const Library = () => {
   const handleImportConfirm = async (data: { items?: any[], library?: string, format?: string }) => {
     try {
       // Create a new library if needed
-      if (data.library && !libraries.some(lib => lib.id === data.library)) {
-        await createLibrary(data.library);
+      let libraryId = '';
+      
+      if (data.library) {
+        const safeLibraryId = data.library.replace(/\s+/g, '_').toLowerCase();
+        
+        // Check if library exists
+        const existingLibrary = libraries.find(lib => lib.id === safeLibraryId);
+        
+        if (!existingLibrary) {
+          const newLibrary = await createLibrary(data.library);
+          libraryId = newLibrary.id;
+        } else {
+          libraryId = existingLibrary.id;
+        }
         
         // Refresh libraries
         const updatedLibraries = await getLibraries();
@@ -278,7 +297,8 @@ const Library = () => {
       
       // Create new items from valid rows
       if (data.items && data.items.length > 0) {
-        const libraryId = data.library || 'default';
+        // Utilisez le libraryId créé ou existant pour tous les articles
+        const targetLibraryId = libraryId || 'default';
         const newItems: LibraryItem[] = [];
         
         for (const row of data.items) {
@@ -287,7 +307,10 @@ const Library = () => {
             row.lot,
             row.unite as ItemUnit,
             typeof row.prix_unitaire === 'string' ? parseFloat(row.prix_unitaire) : row.prix_unitaire,
-            libraryId
+            targetLibraryId,
+            row.description,
+            row.subCategory,
+            row.tags
           );
           
           newItems.push(newItem);
@@ -299,9 +322,14 @@ const Library = () => {
         const updatedLibraries = await getLibraries();
         setLibraries(updatedLibraries);
         
+        // Si une nouvelle bibliothèque a été créée, sélectionnez-la
+        if (libraryId) {
+          setSelectedLibrary(libraryId);
+        }
+        
         toast({
           title: "Import réussi",
-          description: `${data.items.length} articles importés avec succès`,
+          description: `${data.items.length} articles importés avec succès dans ${data.library}`,
         });
       }
     } catch (err) {
@@ -359,6 +387,7 @@ const Library = () => {
       try {
         const fetchedItems = await getLibraryItems(selectedLibrary);
         setItems(fetchedItems);
+        setSelectedItems([]);
       } catch (err) {
         console.error('Error loading items:', err);
       }
@@ -373,7 +402,7 @@ const Library = () => {
     if (searchQuery && 
         !item.designation.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !item.lot.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !(item.type && item.type.toLowerCase().includes(searchQuery.toLowerCase()))) {
+        !item.subCategory.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
     
@@ -382,8 +411,8 @@ const Library = () => {
       return false;
     }
     
-    // Type filter
-    if (typeFilter !== 'all' && item.type !== typeFilter) {
+    // SubCategory filter
+    if (subCategoryFilter !== 'all' && item.subCategory !== subCategoryFilter) {
       return false;
     }
     
@@ -395,10 +424,10 @@ const Library = () => {
     return true;
   });
 
-  // Extract unique types from items for filter
-  const uniqueTypes = Array.from(new Set(items
-    .filter(item => item.type)
-    .map(item => item.type as string)));
+  // Extract unique subCategories from items for filter
+  const uniqueSubCategories = Array.from(new Set(items
+    .filter(item => item.subCategory)
+    .map(item => item.subCategory)));
   
   // Get unique units from items for filter
   const uniqueUnits = Array.from(new Set(items.map(item => item.unite)));
@@ -413,7 +442,7 @@ const Library = () => {
   // Reset to page 1 when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [selectedLibrary, searchQuery, categoryFilter, typeFilter, unitFilter]);
+  }, [selectedLibrary, searchQuery, categoryFilter, subCategoryFilter, unitFilter]);
 
   const handleChangeLibrary = (value: string) => {
     setSelectedLibrary(value);
@@ -426,23 +455,149 @@ const Library = () => {
     form.setValue('bibliotheque_id', selectedLibrary !== 'all' ? selectedLibrary : 'default');
     setIsDialogOpen(true);
   };
+  
+  // Selection mode handlers
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    setSelectedItems([]);
+  };
+  
+  const handleSelectItem = (id: string, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedItems([...selectedItems, id]);
+    } else {
+      setSelectedItems(selectedItems.filter(itemId => itemId !== id));
+    }
+  };
+  
+  const handleSelectAll = () => {
+    setSelectedItems(paginatedItems.map(item => item.id));
+  };
+  
+  const handleSelectNone = () => {
+    setSelectedItems([]);
+  };
+  
+  const handleDeleteSelected = () => {
+    if (selectedItems.length > 0) {
+      setIsDeleteConfirmOpen(true);
+    }
+  };
+  
+  const handleConfirmDeleteSelected = async () => {
+    try {
+      await deleteLibraryItems(selectedItems);
+      
+      // Refresh items and libraries
+      const fetchedItems = await getLibraryItems(selectedLibrary);
+      setItems(fetchedItems);
+      
+      const updatedLibraries = await getLibraries();
+      setLibraries(updatedLibraries);
+      
+      setSelectedItems([]);
+      setIsDeleteConfirmOpen(false);
+      
+      toast({
+        title: "Articles supprimés",
+        description: `${selectedItems.length} articles ont été supprimés avec succès`,
+      });
+    } catch (err) {
+      console.error('Error deleting items:', err);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la suppression des articles",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleMoveToLibrary = async (targetLibraryId: string) => {
+    if (!targetLibraryId || selectedItems.length === 0) return;
+    
+    try {
+      await moveItemsToLibrary(selectedItems, targetLibraryId);
+      
+      // Refresh items and libraries
+      const fetchedItems = await getLibraryItems(selectedLibrary);
+      setItems(fetchedItems);
+      
+      const updatedLibraries = await getLibraries();
+      setLibraries(updatedLibraries);
+      
+      setSelectedItems([]);
+      
+      toast({
+        title: "Articles déplacés",
+        description: `${selectedItems.length} articles ont été déplacés vers la bibliothèque sélectionnée`,
+      });
+    } catch (err) {
+      console.error('Error moving items:', err);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors du déplacement des articles",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Handle library deletion
+  const handleDeleteLibrary = async (id: string, deleteItems: boolean) => {
+    return await deleteLibrary(id, deleteItems);
+  };
+  
+  // Refresh data
+  const refreshData = async () => {
+    const updatedLibraries = await getLibraries();
+    setLibraries(updatedLibraries);
+    
+    const fetchedItems = await getLibraryItems(selectedLibrary);
+    setItems(fetchedItems);
+  };
 
   return (
     <DashboardLayout>
       <div className="container pb-10 pt-8">
+        {isSelectionMode && (
+          <LibrarySelectionToolbar
+            selectedItemsCount={selectedItems.length}
+            allItemsCount={filteredItems.length}
+            onSelectAll={handleSelectAll}
+            onSelectNone={handleSelectNone}
+            onDeleteSelected={handleDeleteSelected}
+            onMoveToLibrary={handleMoveToLibrary}
+            onExitSelectionMode={toggleSelectionMode}
+            libraries={libraries}
+            currentLibraryId={selectedLibrary}
+          />
+        )}
+        
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <h1 className="text-3xl font-bold">Ma bibliothèque</h1>
           
           <div className="flex space-x-2 mt-4 md:mt-0">
-            <Button 
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={() => setIsImportDialogOpen(true)}
-            >
-              <Upload className="h-4 w-4" />
-              Importer une bibliothèque
-            </Button>
+            {!isSelectionMode && (
+              <>
+                <Button 
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  onClick={() => setIsManageLibrariesDialogOpen(true)}
+                >
+                  <Settings className="h-4 w-4" />
+                  Gérer les bibliothèques
+                </Button>
+              
+                <Button 
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  onClick={() => setIsImportDialogOpen(true)}
+                >
+                  <Upload className="h-4 w-4" />
+                  Importer une bibliothèque
+                </Button>
+              </>
+            )}
           </div>
         </div>
         
@@ -496,22 +651,45 @@ const Library = () => {
           <BibliothequeFilter
             categoryFilter={categoryFilter}
             setCategoryFilter={setCategoryFilter}
-            typeFilter={typeFilter}
-            setTypeFilter={setTypeFilter}
+            subCategoryFilter={subCategoryFilter}
+            setSubCategoryFilter={setSubCategoryFilter}
             unitFilter={unitFilter}
             setUnitFilter={setUnitFilter}
             categories={categories}
-            uniqueTypes={uniqueTypes}
+            uniqueSubCategories={uniqueSubCategories}
             uniqueUnits={uniqueUnits}
           />
           
-          <Button 
-            className="bg-metrOrange hover:bg-metrOrange/90"
-            onClick={handleAddArticle}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Ajouter un article
-          </Button>
+          <div className="flex gap-2">
+            {!isSelectionMode ? (
+              <>
+                <Button 
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  onClick={toggleSelectionMode}
+                >
+                  <CheckSquare className="h-4 w-4" />
+                  Sélectionner
+                </Button>
+                
+                <Button 
+                  className="bg-metrOrange hover:bg-metrOrange/90"
+                  onClick={handleAddArticle}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Ajouter un article
+                </Button>
+              </>
+            ) : (
+              <Button 
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={toggleSelectionMode}
+              >
+                Quitter le mode sélection
+              </Button>
+            )}
+          </div>
         </div>
         
         {/* Table with count */}
@@ -527,6 +705,9 @@ const Library = () => {
           filteredItems={paginatedItems}
           onEditItem={handleEditItem}
           onDeleteItem={handleDeleteItem}
+          selectionMode={isSelectionMode}
+          selectedItems={selectedItems}
+          onSelectItem={handleSelectItem}
         />
         
         {/* Pagination */}
@@ -606,6 +787,15 @@ const Library = () => {
           onOpenChange={setIsImportDialogOpen}
           onImportConfirm={handleImportConfirm}
         />
+        
+        {/* Manage Libraries Dialog */}
+        <ManageLibrariesDialog
+          open={isManageLibrariesDialogOpen}
+          onOpenChange={setIsManageLibrariesDialogOpen}
+          libraries={libraries}
+          onDeleteLibrary={handleDeleteLibrary}
+          onRefresh={refreshData}
+        />
 
         {/* New Library Dialog */}
         <Dialog open={isNewLibraryDialogOpen} onOpenChange={setIsNewLibraryDialogOpen}>
@@ -635,6 +825,28 @@ const Library = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Supprimer les articles sélectionnés</AlertDialogTitle>
+              <AlertDialogDescription>
+                Vous êtes sur le point de supprimer {selectedItems.length} article{selectedItems.length > 1 ? 's' : ''}.
+                Cette action est irréversible.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleConfirmDeleteSelected}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Supprimer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

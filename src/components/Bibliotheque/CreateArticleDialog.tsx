@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,8 +14,7 @@ import { ItemUnit } from '@/types/library';
 export const itemFormSchema = z.object({
   designation: z.string().min(3, "La désignation doit contenir au moins 3 caractères"),
   lot: z.string().min(1, "Veuillez sélectionner un lot"),
-  subCategory: z.string().optional(),
-  type: z.string().min(1, "Veuillez entrer un type"),
+  subCategory: z.string().min(1, "Veuillez entrer une sous-catégorie"),
   unite: z.string().min(1, "Veuillez sélectionner une unité"),
   prix_unitaire: z.coerce.number().min(0, "Le prix doit être positif"),
   description: z.string().optional(),
@@ -135,21 +135,7 @@ const CreateArticleDialog: React.FC<CreateArticleDialogProps> = ({
                 name="subCategory"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Sous-lot</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type*</FormLabel>
+                    <FormLabel>Sous-catégorie*</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>

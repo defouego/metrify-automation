@@ -9,24 +9,24 @@ import { FormLabel } from '@/components/ui/form';
 interface BibliothequeFilterProps {
   categoryFilter: string;
   setCategoryFilter: (category: string) => void;
-  typeFilter: string;
-  setTypeFilter: (type: string) => void;
+  subCategoryFilter: string;
+  setSubCategoryFilter: (subCategory: string) => void;
   unitFilter: string;
   setUnitFilter: (unit: string) => void;
   categories: string[];
-  uniqueTypes: string[];
+  uniqueSubCategories: string[];
   uniqueUnits: string[];
 }
 
 const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
   categoryFilter,
   setCategoryFilter,
-  typeFilter,
-  setTypeFilter,
+  subCategoryFilter,
+  setSubCategoryFilter,
   unitFilter,
   setUnitFilter,
   categories,
-  uniqueTypes,
+  uniqueSubCategories,
   uniqueUnits
 }) => {
   return (
@@ -60,15 +60,15 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
             </div>
             
             <div>
-              <FormLabel>Type</FormLabel>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <FormLabel>Sous-catégorie</FormLabel>
+              <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Tous les types" />
+                  <SelectValue placeholder="Toutes les sous-catégories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les types</SelectItem>
-                  {uniqueTypes.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  <SelectItem value="all">Toutes les sous-catégories</SelectItem>
+                  {uniqueSubCategories.map(subCategory => (
+                    <SelectItem key={subCategory} value={subCategory}>{subCategory}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -106,14 +106,14 @@ const BibliothequeFilter: React.FC<BibliothequeFilterProps> = ({
           </SelectContent>
         </Select>
         
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
+        <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter}>
           <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Type" />
+            <SelectValue placeholder="Sous-catégorie" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous les types</SelectItem>
-            {uniqueTypes.map(type => (
-              <SelectItem key={type} value={type}>{type}</SelectItem>
+            <SelectItem value="all">Toutes les sous-catégories</SelectItem>
+            {uniqueSubCategories.map(subCategory => (
+              <SelectItem key={subCategory} value={subCategory}>{subCategory}</SelectItem>
             ))}
           </SelectContent>
         </Select>

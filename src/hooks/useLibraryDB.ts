@@ -90,9 +90,8 @@ export function useLibraryDB() {
     prix_unitaire: number,
     bibliotheque_id: string = 'default',
     description?: string,
-    subCategory?: string,
-    tags?: string[],
-    type: string = 'Non spécifié' // Default value for type since it's required
+    subCategory: string = 'Non spécifié', // Changé de type à subCategory
+    tags?: string[]
   ): Promise<LibraryItem> => {
     setIsLoading(true);
     setError(null);
@@ -102,8 +101,7 @@ export function useLibraryDB() {
         id: generateId(),
         designation,
         lot,
-        subCategory,
-        type, // This is now required
+        subCategory, // Maintenant obligatoire
         unite,
         prix_unitaire,
         description,
@@ -178,6 +176,140 @@ export function useLibraryDB() {
       setIsLoading(false);
     }
   };
+
+  // Delete multiple items at once
+  const deleteLibraryItems = async (ids: string[]): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const items = (await storage.listLibraryItems()).filter(item => ids.includes(item.id));
+      
+      // Group items by library for efficient library count updates
+      const libraryCountUpdates: Record<string, number> = {};
+      
+      for (const item of items) {
+        if (item.bibliotheque_id) {
+          if (!libraryCountUpdates[item.bibliotheque_id]) {
+            libraryCountUpdates[item.bibliotheque_id] = 0;
+          }
+          libraryCountUpdates[item.bibliotheque_id]--;
+        }
+        
+        await storage.deleteLibraryItem(item.id);
+      }
+      
+      // Update library counts
+      const libraries = await storage.listLibraries();
+      for (const libId in libraryCountUpdates) {
+        const library = libraries.find(lib => lib.id === libId);
+        if (library) {
+          library.itemCount = Math.max(0, library.itemCount + libraryCountUpdates[libId]);
+          await storage.updateLibrary(library);
+        }
+      }
+    } catch (err: any) {
+      setError(err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Move items to another library
+  const moveItemsToLibrary = async (itemIds: string[], targetLibraryId: string): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const items = (await storage.listLibraryItems()).filter(item => itemIds.includes(item.id));
+      const sourceLibraryUpdates: Record<string, number> = {};
+      
+      for (const item of items) {
+        const sourceLibraryId = item.bibliotheque_id;
+        
+        // Track count changes for the source library
+        if (sourceLibraryId) {
+          if (!sourceLibraryUpdates[sourceLibraryId]) {
+            sourceLibraryUpdates[sourceLibraryId] = 0;
+          }
+          sourceLibraryUpdates[sourceLibraryId]--;
+        }
+        
+        // Update item with new library
+        const updatedItem = {
+          ...item,
+          bibliotheque_id: targetLibraryId
+        };
+        
+        await storage.updateLibraryItem(updatedItem);
+      }
+      
+      // Update source library counts
+      const libraries = await storage.listLibraries();
+      for (const libId in sourceLibraryUpdates) {
+        const library = libraries.find(lib => lib.id === libId);
+        if (library) {
+          library.itemCount = Math.max(0, library.itemCount + sourceLibraryUpdates[libId]);
+          await storage.updateLibrary(library);
+        }
+      }
+      
+      // Update target library count
+      const targetLibrary = libraries.find(lib => lib.id === targetLibraryId);
+      if (targetLibrary) {
+        targetLibrary.itemCount += items.length;
+        await storage.updateLibrary(targetLibrary);
+      }
+    } catch (err: any) {
+      setError(err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Delete a library and optionally its items
+  const deleteLibrary = async (id: string, deleteItems: boolean = false): Promise<void> => {
+    if (id === 'all') {
+      throw new Error('La bibliothèque "Tous les articles" ne peut pas être supprimée');
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const items = await storage.listLibraryItemsByLibrary(id);
+      
+      // If deleteItems is false, move items to default library
+      if (!deleteItems && items.length > 0) {
+        for (const item of items) {
+          const updatedItem = { ...item, bibliotheque_id: 'default' };
+          await storage.updateLibraryItem(updatedItem);
+        }
+        
+        // Update default library count
+        const libraries = await storage.listLibraries();
+        const defaultLibrary = libraries.find(lib => lib.id === 'default');
+        if (defaultLibrary) {
+          defaultLibrary.itemCount += items.length;
+          await storage.updateLibrary(defaultLibrary);
+        }
+      } else if (deleteItems && items.length > 0) {
+        // Delete all items in the library
+        for (const item of items) {
+          await storage.deleteLibraryItem(item.id);
+        }
+      }
+      
+      await storage.deleteLibrary(id);
+    } catch (err: any) {
+      setError(err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const getLibraryItems = async (libraryId: string = 'all'): Promise<LibraryItem[]> => {
     setIsLoading(true);
@@ -233,12 +365,12 @@ export function useLibraryDB() {
           await storage.addLibrary(library);
         }
         
-        // Import sample items with required type field
+        // Import sample items avec subCategory au lieu de type
         const sampleItems: Omit<LibraryItem, 'id'>[] = [
           { 
             designation: 'Béton de fondation', 
             lot: '2- GROS ŒUVRE - MAÇONNERIE',
-            type: 'Fondation', 
+            subCategory: 'Fondation', 
             unite: 'M3', 
             prix_unitaire: 120.50, 
             date_derniere_utilisation: formatDate(),
@@ -249,7 +381,7 @@ export function useLibraryDB() {
           { 
             designation: 'Fenêtre PVC double vitrage', 
             lot: '10- MENUISERIES EXTÉRIEURES',
-            type: 'Fenêtre', 
+            subCategory: 'Fenêtre', 
             unite: 'U', 
             prix_unitaire: 425.00, 
             date_derniere_utilisation: formatDate(), 
@@ -260,7 +392,7 @@ export function useLibraryDB() {
           { 
             designation: 'Peinture mate blanche', 
             lot: '8- PEINTURES',
-            type: 'Peinture', 
+            subCategory: 'Peinture', 
             unite: 'L', 
             prix_unitaire: 28.75, 
             date_derniere_utilisation: formatDate(),
@@ -271,7 +403,7 @@ export function useLibraryDB() {
           { 
             designation: 'Radiateur électrique', 
             lot: '11- ÉLECTRICITÉ COURANTS FORTS',
-            type: 'Chauffage', 
+            subCategory: 'Chauffage', 
             unite: 'U', 
             prix_unitaire: 199.90,
             date_creation: formatDate(),
@@ -281,7 +413,7 @@ export function useLibraryDB() {
           { 
             designation: 'Carrelage grès cérame', 
             lot: '6- CARRELAGES, REVÊTEMENTS',
-            type: 'Carrelage', 
+            subCategory: 'Carrelage', 
             unite: 'M2', 
             prix_unitaire: 45.20, 
             date_derniere_utilisation: formatDate(),
@@ -292,7 +424,7 @@ export function useLibraryDB() {
           { 
             designation: 'Porte intérieure', 
             lot: '9- MENUISERIES INTÉRIEURES',
-            type: 'Porte', 
+            subCategory: 'Porte', 
             unite: 'U', 
             prix_unitaire: 235.00, 
             date_derniere_utilisation: formatDate(),
@@ -325,12 +457,14 @@ export function useLibraryDB() {
     // Library operations
     createLibrary,
     updateLibrary: storage.updateLibrary,
-    deleteLibrary: storage.deleteLibrary,
+    deleteLibrary,
     getLibraries,
     // LibraryItem operations
     createLibraryItem,
     updateLibraryItem,
     deleteLibraryItem,
+    deleteLibraryItems, // Nouvelle méthode
+    moveItemsToLibrary, // Nouvelle méthode
     getLibraryItems,
     // Initialization
     initializeWithSampleData

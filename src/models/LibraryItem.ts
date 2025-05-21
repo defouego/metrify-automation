@@ -5,8 +5,7 @@ export interface LibraryItem {
   id: string;
   designation: string;
   lot: string;
-  subCategory?: string;
-  type: string; // Changed from type?: string to type: string to make it required
+  subCategory: string; // Changé de type?: string à subCategory: string (obligatoire)
   unite: ItemUnit;
   prix_unitaire: number;
   description?: string;

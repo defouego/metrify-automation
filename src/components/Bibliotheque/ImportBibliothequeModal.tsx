@@ -33,7 +33,7 @@ const ImportBibliothequeModal: React.FC<ImportBibliothequeModalProps> = ({
 
   const validateExcelData = (data: any[]): boolean => {
     // Basic validation - check for required fields
-    const requiredFields = ['designation', 'lot', 'type', 'unite', 'prix_unitaire'];
+    const requiredFields = ['designation', 'lot', 'subCategory', 'unite', 'prix_unitaire'];
     
     // Check if array is not empty
     if (data.length === 0) {
@@ -212,7 +212,7 @@ const ImportBibliothequeModal: React.FC<ImportBibliothequeModalProps> = ({
                   onChange={handleFileChange}
                 />
                 <p className="text-xs text-gray-500">
-                  Le fichier doit contenir les colonnes: designation, lot, type, unite, prix_unitaire
+                  Le fichier doit contenir les colonnes: designation, lot, subCategory, unite, prix_unitaire
                 </p>
               </div>
             </div>
