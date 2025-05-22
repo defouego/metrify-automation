@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Element, Plan, Projet, Surface } from '@/types/metr';
@@ -65,7 +64,7 @@ const ProjectViewContent = () => {
           id: 'measure-1',
           type: 'area',
           value: 23.45,
-          unit: 'm²',
+          unit: 'M2', // Updated to match ItemUnit type
           points: [
             {x: 100, y: 100},
             {x: 300, y: 100},
@@ -78,7 +77,7 @@ const ProjectViewContent = () => {
           id: 'measure-2',
           type: 'linear',
           value: 5.75,
-          unit: 'ml',
+          unit: 'ML', // Updated to match ItemUnit type
           points: [
             {x: 150, y: 250},
             {x: 350, y: 250}
@@ -89,7 +88,7 @@ const ProjectViewContent = () => {
           id: 'measure-3',
           type: 'count',
           value: 3,
-          unit: 'u',
+          unit: 'U', // Updated to match ItemUnit type
           points: [
             {x: 200, y: 300},
             {x: 250, y: 320},

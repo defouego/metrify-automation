@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useCalibrationContext } from '@/contexts/CalibrationContext';
@@ -8,6 +7,7 @@ import { ElementType } from '@/types/project';
 import { toast } from 'sonner';
 import { Element, Plan } from '@/types/metr';
 import { Canvas as FabricCanvas, Rect, Circle, Line, Polygon, Point } from 'fabric';
+import { Button } from '@/components/ui/button';
 import { Square, Ruler, Hash, Scan, GitCompare, Layers, Maximize, MousePointer } from 'lucide-react';
 
 interface PlanViewerProps {
@@ -248,9 +248,15 @@ const PlanViewer = ({
         });
       }
     } else if (activeTool === 'length' && activeObj instanceof Line) {
-      const points = activeObj.points || [];
-      points[1] = new Point(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-      activeObj.set({ points });
+      // Fix: Access Line coordinates using specific fabric.js API
+      const coords = (activeObj as any).coords || [];
+      const p1 = { x: coords[0], y: coords[1] };
+      const p2 = { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
+      
+      activeObj.set({ 
+        x2: p2.x, 
+        y2: p2.y 
+      });
     }
     
     fabricCanvas.renderAll();
@@ -277,14 +283,17 @@ const PlanViewer = ({
         toast.success(`Surface: ${area.toFixed(2)} m²`);
       }
     } else if (activeTool === 'length' && activeObj instanceof Line) {
-      // Calculate length
-      const points = activeObj.points || [];
-      if (points.length >= 2) {
-        const dx = points[1].x - points[0].x;
-        const dy = points[1].y - points[0].y;
-        const length = Math.sqrt(dx * dx + dy * dy) / 100; // Convert to m
-        toast.success(`Longueur: ${length.toFixed(2)} m`);
-      }
+      // Fix: Calculate length using coordinates
+      const x1 = activeObj.x1 || 0;
+      const y1 = activeObj.y1 || 0;
+      const x2 = activeObj.x2 || 0;
+      const y2 = activeObj.y2 || 0;
+      
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const length = Math.sqrt(dx * dx + dy * dy) / 100; // Convert to m
+      
+      toast.success(`Longueur: ${length.toFixed(2)} m`);
     }
     
     fabricCanvas.renderAll();
