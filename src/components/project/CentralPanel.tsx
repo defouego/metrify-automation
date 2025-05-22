@@ -1,6 +1,5 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Canvas as FabricCanvas, Rect } from 'fabric';
 import { Element, Plan, Projet, Surface } from '@/types/metr';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -137,10 +136,16 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
       )}
       
       {/* Plan Viewer Component */}
-      <PlanViewer 
-        projectId={projet.id}
-        isCalibrating={isCalibrating}
-      />
+      {plan && (
+        <PlanViewer 
+          projectId={projet.id}
+          isCalibrating={isCalibrating}
+          plan={plan}
+          onElementSelected={onElementSelected}
+          selectedSurface={selectedSurface?.id}
+          hoveredElementId={hoveredElementId}
+        />
+      )}
       
       {/* Instructions for uploading plan if no plan is selected */}
       {!plan && !isCalibrating && (

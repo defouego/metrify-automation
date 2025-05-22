@@ -1,44 +1,293 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useCalibrationContext } from '@/contexts/CalibrationContext';
 import CalibrationToolbar from '@/components/project/CalibrationToolbar';
+import MeasurementToolbar from '@/components/project/MeasurementToolbar';
 import { ElementType } from '@/types/project';
 import { toast } from 'sonner';
+import { Element, Plan } from '@/types/metr';
+import { Canvas as FabricCanvas, Rect, Circle, Line, Polygon, Point } from 'fabric';
+import { Square, Ruler, Hash, Scan, GitCompare, Layers, Maximize, MousePointer } from 'lucide-react';
 
 interface PlanViewerProps {
   projectId?: string;
   isCalibrating: boolean;
+  plan?: Plan | null;
+  onElementSelected?: (element: Element) => void;
+  selectedSurface?: string | null;
+  hoveredElementId?: string | null;
 }
 
-const PlanViewer = ({ projectId, isCalibrating }: PlanViewerProps) => {
+type MeasurementTool = 
+  | 'select'
+  | 'surface'
+  | 'length'
+  | 'counter'
+  | 'detection'
+  | 'compare'
+  | 'layer';
+
+type SurfaceType = 'polygon' | 'rectangle' | 'circle';
+
+const PlanViewer = ({ 
+  projectId, 
+  isCalibrating, 
+  plan,
+  onElementSelected,
+  selectedSurface,
+  hoveredElementId
+}: PlanViewerProps) => {
   const [scale, setScale] = useState(1);
+  const [activeTool, setActiveTool] = useState<MeasurementTool>('select');
+  const [surfaceType, setSurfaceType] = useState<SurfaceType>('rectangle');
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
   const { 
     calibrationStep, 
     addCalibrationPoint, 
     currentElementType,
     currentTypePoints 
   } = useCalibrationContext();
+
+  // Initialize Fabric canvas
+  useEffect(() => {
+    if (!canvasRef.current || fabricCanvas) return;
+    
+    const canvas = new FabricCanvas(canvasRef.current, {
+      width: containerRef.current?.clientWidth || 800,
+      height: containerRef.current?.clientHeight || 600,
+      selection: true,
+      backgroundColor: '#f9f9f9'
+    });
+    
+    setFabricCanvas(canvas);
+    
+    // Add demo plan background image (in real app, would be the actual plan)
+    const planBackground = new Rect({
+      left: 50,
+      top: 50,
+      width: 700,
+      height: 500,
+      fill: '#fff',
+      stroke: '#ddd',
+      strokeWidth: 1,
+      selectable: false
+    });
+    
+    // Demo room outlines (would be replaced by actual plan data)
+    const room1 = new Rect({
+      left: 100, 
+      top: 100,
+      width: 200,
+      height: 150,
+      fill: 'transparent',
+      stroke: '#333',
+      strokeWidth: 2,
+      selectable: false
+    });
+    
+    const room2 = new Rect({
+      left: 350, 
+      top: 100,
+      width: 150,
+      height: 150,
+      fill: 'transparent',
+      stroke: '#333',
+      strokeWidth: 2,
+      selectable: false
+    });
+    
+    const room3 = new Rect({
+      left: 100, 
+      top: 300,
+      width: 400,
+      height: 150,
+      fill: 'transparent',
+      stroke: '#333',
+      strokeWidth: 2,
+      selectable: false
+    });
+    
+    // Door examples
+    const door1 = new Line([150, 100, 180, 100], {
+      stroke: '#555',
+      strokeWidth: 3,
+      selectable: false
+    });
+    
+    const door2 = new Line([350, 150, 350, 180], {
+      stroke: '#555',
+      strokeWidth: 3,
+      selectable: false
+    });
+    
+    canvas.add(planBackground, room1, room2, room3, door1, door2);
+    
+    return () => {
+      canvas.dispose();
+    };
+  }, []);
   
-  // Mock function to represent what would be done by the external plan rendering service
-  const renderPlan = () => {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Visualisation du Plan</h3>
-          <p className="text-gray-500 mb-4">
-            {projectId ? `Projet ID: ${projectId}` : 'Aucun projet sélectionné'}
-          </p>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 bg-gray-50">
-            <p className="text-gray-400">
-              Le rendu graphique du plan sera intégré ici.
-            </p>
-            <p className="text-sm text-gray-400 mt-2">
-              (Composant externe à intégrer)
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+  // Handle window resize
+  useEffect(() => {
+    if (!fabricCanvas || !containerRef.current) return;
+    
+    const handleResize = () => {
+      if (containerRef.current) {
+        fabricCanvas.setDimensions({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight
+        });
+        fabricCanvas.renderAll();
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [fabricCanvas]);
+
+  // Handle measurement tool change
+  const handleToolChange = (tool: MeasurementTool) => {
+    setActiveTool(tool);
+    setIsDrawing(false);
+    
+    if (!fabricCanvas) return;
+    
+    // Reset drawing mode
+    fabricCanvas.isDrawingMode = false;
+    
+    // Enable selection only for select tool
+    fabricCanvas.selection = tool === 'select';
+    
+    // Set all objects to be selectable or not based on tool
+    fabricCanvas.getObjects().forEach(obj => {
+      if (obj.strokeWidth !== 1) { // Skip background
+        obj.selectable = tool === 'select';
+      }
+    });
+    
+    toast.info(`Outil ${tool} activé`);
+  };
+
+  // Handle mouse down for drawing
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (activeTool !== 'surface' && activeTool !== 'length') return;
+    if (!fabricCanvas) return;
+    
+    setIsDrawing(true);
+    
+    if (activeTool === 'surface') {
+      if (surfaceType === 'rectangle') {
+        const rect = new Rect({
+          left: e.nativeEvent.offsetX,
+          top: e.nativeEvent.offsetY,
+          width: 0,
+          height: 0,
+          fill: 'rgba(30, 144, 255, 0.2)',
+          stroke: 'rgb(30, 144, 255)',
+          strokeWidth: 2
+        });
+        fabricCanvas.add(rect);
+        fabricCanvas.setActiveObject(rect);
+      } else if (surfaceType === 'circle') {
+        const circle = new Circle({
+          left: e.nativeEvent.offsetX,
+          top: e.nativeEvent.offsetY,
+          radius: 0,
+          fill: 'rgba(30, 144, 255, 0.2)',
+          stroke: 'rgb(30, 144, 255)',
+          strokeWidth: 2
+        });
+        fabricCanvas.add(circle);
+        fabricCanvas.setActiveObject(circle);
+      }
+    } else if (activeTool === 'length') {
+      const line = new Line([
+        e.nativeEvent.offsetX, 
+        e.nativeEvent.offsetY, 
+        e.nativeEvent.offsetX, 
+        e.nativeEvent.offsetY
+      ], {
+        stroke: 'rgb(30, 144, 255)',
+        strokeWidth: 2
+      });
+      fabricCanvas.add(line);
+      fabricCanvas.setActiveObject(line);
+    }
+  };
+  
+  // Handle mouse move for drawing
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDrawing || !fabricCanvas) return;
+    
+    const activeObj = fabricCanvas.getActiveObject();
+    if (!activeObj) return;
+    
+    if (activeTool === 'surface') {
+      if (surfaceType === 'rectangle' && activeObj instanceof Rect) {
+        const width = e.nativeEvent.offsetX - activeObj.left!;
+        const height = e.nativeEvent.offsetY - activeObj.top!;
+        
+        activeObj.set({
+          width: Math.abs(width),
+          height: Math.abs(height),
+          left: width > 0 ? activeObj.left : e.nativeEvent.offsetX,
+          top: height > 0 ? activeObj.top : e.nativeEvent.offsetY
+        });
+      } else if (surfaceType === 'circle' && activeObj instanceof Circle) {
+        const dx = e.nativeEvent.offsetX - activeObj.left!;
+        const dy = e.nativeEvent.offsetY - activeObj.top!;
+        const radius = Math.sqrt(dx * dx + dy * dy);
+        
+        activeObj.set({
+          radius: radius
+        });
+      }
+    } else if (activeTool === 'length' && activeObj instanceof Line) {
+      const points = activeObj.points || [];
+      points[1] = new Point(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+      activeObj.set({ points });
+    }
+    
+    fabricCanvas.renderAll();
+  };
+  
+  // Handle mouse up for drawing
+  const handleMouseUp = () => {
+    if (!isDrawing || !fabricCanvas) return;
+    
+    setIsDrawing(false);
+    
+    const activeObj = fabricCanvas.getActiveObject();
+    if (!activeObj) return;
+    
+    // Finalize the measurement
+    if (activeTool === 'surface') {
+      // Calculate area
+      let area = 0;
+      if (activeObj instanceof Rect) {
+        area = (activeObj.width || 0) * (activeObj.height || 0) / 10000; // Convert to m²
+        toast.success(`Surface: ${area.toFixed(2)} m²`);
+      } else if (activeObj instanceof Circle) {
+        area = Math.PI * Math.pow(activeObj.radius || 0, 2) / 10000; // Convert to m²
+        toast.success(`Surface: ${area.toFixed(2)} m²`);
+      }
+    } else if (activeTool === 'length' && activeObj instanceof Line) {
+      // Calculate length
+      const points = activeObj.points || [];
+      if (points.length >= 2) {
+        const dx = points[1].x - points[0].x;
+        const dy = points[1].y - points[0].y;
+        const length = Math.sqrt(dx * dx + dy * dy) / 100; // Convert to m
+        toast.success(`Longueur: ${length.toFixed(2)} m`);
+      }
+    }
+    
+    fabricCanvas.renderAll();
   };
 
   // Handle click on the plan during calibration
@@ -57,16 +306,58 @@ const PlanViewer = ({ projectId, isCalibrating }: PlanViewerProps) => {
 
   return (
     <div 
+      ref={containerRef}
       className={cn(
         "flex-1 relative overflow-hidden", 
         "bg-white", 
         isCalibrating && calibrationStep === 2 && "cursor-crosshair"
       )}
-      onClick={handlePlanClick}
+      onClick={isCalibrating ? handlePlanClick : undefined}
+      onMouseDown={!isCalibrating ? handleMouseDown : undefined}
+      onMouseMove={!isCalibrating ? handleMouseMove : undefined}
+      onMouseUp={!isCalibrating ? handleMouseUp : undefined}
     >
-      {renderPlan()}
+      {/* Plan canvas */}
+      <canvas ref={canvasRef} className="absolute inset-0" />
       
-      {/* Tooltip de démonstration */}
+      {/* Measurement toolbar at the top */}
+      {!isCalibrating && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+          <MeasurementToolbar 
+            activeTool={activeTool}
+            onToolChange={handleToolChange}
+          />
+        </div>
+      )}
+      
+      {/* Surface type selection when surface tool is active */}
+      {activeTool === 'surface' && (
+        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-10 bg-white p-2 rounded-md shadow-sm flex gap-2">
+          <Button 
+            variant={surfaceType === 'rectangle' ? "default" : "outline"}
+            size="sm" 
+            onClick={() => setSurfaceType('rectangle')}
+          >
+            Rectangle
+          </Button>
+          <Button 
+            variant={surfaceType === 'circle' ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => setSurfaceType('circle')}
+          >
+            Cercle
+          </Button>
+          <Button 
+            variant={surfaceType === 'polygon' ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => setSurfaceType('polygon')}
+          >
+            Polygone
+          </Button>
+        </div>
+      )}
+      
+      {/* Information tooltip */}
       <div 
         className="absolute left-1/2 top-1/3 transform -translate-x-1/2 -translate-y-1/2 
                   bg-white p-2 rounded-md shadow-md border border-gray-200 opacity-0 hover:opacity-100
@@ -76,7 +367,7 @@ const PlanViewer = ({ projectId, isCalibrating }: PlanViewerProps) => {
         <p className="text-xs text-gray-500">L: 4.50m - H: 2.80m</p>
       </div>
       
-      {/* Éléments de sélection de démonstration */}
+      {/* Demo selection elements */}
       <div 
         className="absolute left-1/3 top-1/2 w-24 h-24 border-2 border-blue-500 bg-blue-100/20 
                   rounded-sm pointer-events-none"
@@ -91,6 +382,18 @@ const PlanViewer = ({ projectId, isCalibrating }: PlanViewerProps) => {
       {isCalibrating && calibrationStep === 2 && (
         <CalibrationToolbar elementType={currentElementType} />
       )}
+      
+      {/* Plan controls - zoom, pan, rotate */}
+      <div className="absolute bottom-4 right-4 bg-white p-2 rounded-md shadow-sm flex flex-col gap-1">
+        <Button variant="outline" size="sm" onClick={() => setScale(scale * 1.2)}>
+          <Maximize className="h-4 w-4" />
+          <span className="ml-1">Zoom +</span>
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setScale(Math.max(0.5, scale / 1.2))}>
+          <Maximize className="h-4 w-4 rotate-180" />
+          <span className="ml-1">Zoom -</span>
+        </Button>
+      </div>
     </div>
   );
 };

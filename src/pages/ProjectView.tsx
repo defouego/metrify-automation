@@ -14,6 +14,9 @@ import CalibrationGuide from '@/components/project/CalibrationGuide';
 import { CalibrationProvider, useCalibrationContext } from '@/contexts/CalibrationContext';
 import MeasurementProvider from '@/contexts/MeasurementContext';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { downloadExcel } from '@/utils/excel-utils';
+import { toast } from 'sonner';
+import { Measurement } from '@/models/Measurement';
 
 // Component principal enveloppé par les Providers
 const ProjectView = () => {
@@ -34,6 +37,7 @@ const ProjectViewContent = () => {
   const [selectedSurface, setSelectedSurface] = useState<Surface | null>(null);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [hoveredElementId, setHoveredElementId] = useState<string | null>(null);
+  const [measurements, setMeasurements] = useState<Measurement[]>([]);
 
   // Utiliser le contexte de calibration partagé
   const { 
@@ -54,6 +58,49 @@ const ProjectViewContent = () => {
         surfaces: [],
       };
       setProjet(demoProjet);
+      
+      // Create some demo measurements
+      const demoMeasurements: Measurement[] = [
+        {
+          id: 'measure-1',
+          type: 'area',
+          value: 23.45,
+          unit: 'm²',
+          points: [
+            {x: 100, y: 100},
+            {x: 300, y: 100},
+            {x: 300, y: 200},
+            {x: 100, y: 200}
+          ],
+          date: new Date().toISOString()
+        },
+        {
+          id: 'measure-2',
+          type: 'linear',
+          value: 5.75,
+          unit: 'ml',
+          points: [
+            {x: 150, y: 250},
+            {x: 350, y: 250}
+          ],
+          date: new Date().toISOString()
+        },
+        {
+          id: 'measure-3',
+          type: 'count',
+          value: 3,
+          unit: 'u',
+          points: [
+            {x: 200, y: 300},
+            {x: 250, y: 320},
+            {x: 180, y: 350}
+          ],
+          date: new Date().toISOString()
+        }
+      ];
+      
+      setMeasurements(demoMeasurements);
+      
     }, 500);
   }, [id]);
 
@@ -130,27 +177,6 @@ const ProjectViewContent = () => {
     }
   };
 
-  // Remove an ouvrage from the project
-  const handleRemoveOuvrage = (ouvrageId: string) => {
-    if (!projet) return;
-    
-    // Initialize empty arrays if they don't exist
-    const projectOuvrages = projet.ouvrages || [];
-    const projectSurfaces = projet.surfaces || [];
-    
-    // Also remove the ouvrage from any surface that references it
-    const updatedSurfaces = projectSurfaces.map(surface => ({
-      ...surface,
-      ouvragesIds: (surface.ouvragesIds || []).filter(id => id !== ouvrageId)
-    }));
-    
-    setProjet({
-      ...projet,
-      ouvrages: projectOuvrages.filter(o => o.id !== ouvrageId),
-      surfaces: updatedSurfaces,
-    });
-  };
-
   // Handle element selection from the plan
   const handleElementSelected = (element: Element) => {
     // When a room (piece) is selected, create or select a surface for it
@@ -183,6 +209,25 @@ const ProjectViewContent = () => {
       }
     }
   };
+  
+  // Handle export to Excel
+  const handleExportExcel = () => {
+    if (!projet) return;
+    
+    downloadExcel(projet);
+    toast.success("Exportation Excel réussie");
+  };
+  
+  // Handle save project
+  const handleSaveProject = () => {
+    toast.success("Projet enregistré avec succès");
+  };
+  
+  // Handle tool change
+  const handleToolChange = (tool: any) => {
+    // This would normally update the active tool in the PlanViewer
+    console.log(`Tool changed to: ${tool}`);
+  };
 
   if (!projet) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
@@ -194,7 +239,12 @@ const ProjectViewContent = () => {
   return (
     <ProjectLayout>
       <Header projet={projet} onNewProject={() => setIsNewProjectModalOpen(true)} />
-      <ProjectToolbar onCalibrationStart={handleStartCalibration} />
+      <ProjectToolbar 
+        onCalibrationStart={handleStartCalibration} 
+        onToolChange={handleToolChange}
+        onExportExcel={handleExportExcel}
+        onSaveProject={handleSaveProject}
+      />
       
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel - hidden during calibration */}
