@@ -3,19 +3,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Projet, Surface } from '@/types/metr';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Package, Tag, Ruler, ChevronRight } from 'lucide-react';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
+import { Search, Package, Tag, Ruler, Plus } from 'lucide-react';
 import { LibraryItem, ItemUnit } from '@/types/library';
 import { useLibraryDB } from '@/hooks/useLibraryDB';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BibliothequeFilter from '@/components/Bibliotheque/BibliothequeFilter';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import CreateArticleDialog, { ItemFormValues } from '@/components/Bibliotheque/CreateArticleDialog';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { itemFormSchema } from '@/components/Bibliotheque/CreateArticleDialog';
+import { toast } from 'sonner';
+import SearchableSelect from '@/components/ui/searchable-select';
+import PanelToggle from '@/components/ui/panel-toggle';
 
 interface LeftPanelProps {
   projet: Projet;
@@ -24,6 +24,27 @@ interface LeftPanelProps {
 }
 
 const ITEMS_PER_PAGE = 50;
+
+const UNITS = [
+  { code: 'M2' as ItemUnit, name: 'Mètre carré' },
+  { code: 'ML' as ItemUnit, name: 'Mètre linéaire' },
+  { code: 'M3' as ItemUnit, name: 'Mètre cube' },
+  { code: 'U' as ItemUnit, name: 'Unité' },
+  { code: 'PCE' as ItemUnit, name: 'Pièce' },
+  { code: 'KG' as ItemUnit, name: 'Kilogramme' },
+  { code: 'T' as ItemUnit, name: 'Tonne' },
+];
+
+const CATEGORIES = [
+  'Gros œuvre',
+  'Second œuvre',
+  'Électricité',
+  'Plomberie',
+  'Chauffage',
+  'Menuiserie',
+  'Revêtements',
+  'Peinture',
+];
 
 const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuvrage }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,19 +56,34 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   const [libraries, setLibraries] = useState<{id: string, name: string}[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [panelWidth, setPanelWidth] = useState(300); // Default width
+  const [panelWidth, setPanelWidth] = useState(300);
+  const [isCreateArticleOpen, setIsCreateArticleOpen] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const resizeRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
   
-  // Use our library database hook
   const {
     isLoading,
     getLibraryItems,
     getLibraries,
-    initializeWithSampleData
+    initializeWithSampleData,
+    createLibraryItem
   } = useLibraryDB();
   
+  const form = useForm<ItemFormValues>({
+    resolver: zodResolver(itemFormSchema),
+    defaultValues: {
+      designation: '',
+      lot: '',
+      subCategory: '',
+      unite: 'U',
+      prix_unitaire: 0,
+      description: '',
+      bibliotheque_id: projet.id,
+    },
+  });
+
   // Load library items and libraries
   useEffect(() => {
     const loadData = async () => {
@@ -60,7 +96,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
         setItems(fetchedItems as unknown as LibraryItem[] || []);
       } catch (err) {
         console.error('Error loading data:', err);
-        // Set empty arrays as fallback
         setLibraries([]);
         setItems([]);
       }
@@ -75,7 +110,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
       try {
         const fetchedItems = await getLibraryItems(selectedLibrary);
         setItems(fetchedItems as unknown as LibraryItem[] || []);
-        setCurrentPage(1); // Reset to first page when changing library
+        setCurrentPage(1);
       } catch (err) {
         console.error('Error loading items:', err);
         setItems([]);
@@ -85,21 +120,16 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
     loadLibraryItems();
   }, [selectedLibrary]);
   
-  // Get unique lots from the library - add safety check for items
   const uniqueLots = [...new Set((items || []).map(o => o.lot))];
-  
-  // Get unique subCategories from the library - add safety check for items and subCategory
   const uniqueSubCategories = [...new Set((items || [])
     .filter(item => item.subCategory)
     .map(item => item.subCategory))];
-  
-  // Get unique units from the library - add safety check for items
   const uniqueUnits = [...new Set((items || []).map(item => item.unite))];
 
   // Setup resize handlers
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (resizeRef.current && startXRef.current) {
+      if (isResizing && startXRef.current) {
         const dx = e.clientX - startXRef.current;
         const newWidth = Math.max(250, Math.min(600, startWidthRef.current + dx));
         setPanelWidth(newWidth);
@@ -107,35 +137,32 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
     };
 
     const handleMouseUp = () => {
+      setIsResizing(false);
       startXRef.current = 0;
       document.body.style.cursor = 'default';
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = 'auto';
     };
 
-    const handleMouseDown = (e: MouseEvent) => {
-      startXRef.current = e.clientX;
-      startWidthRef.current = panelWidth;
-      document.body.style.cursor = 'ew-resize';
+    if (isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
-    };
-
-    const resizeHandle = resizeRef.current;
-    if (resizeHandle) {
-      resizeHandle.addEventListener('mousedown', handleMouseDown);
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
     }
 
     return () => {
-      if (resizeHandle) {
-        resizeHandle.removeEventListener('mousedown', handleMouseDown);
-      }
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [panelWidth]);
+  }, [isResizing]);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    startXRef.current = e.clientX;
+    startWidthRef.current = panelWidth;
+  };
   
-  // Filter items based on search term and selected filters - add safety check for items
+  // Filter items based on search term and selected filters
   const filteredItems = (items || []).filter(item => {
     const matchesSearch = item.designation.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLot = selectedLot === 'all' ? true : item.lot === selectedLot;
@@ -156,44 +183,36 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   // Generate page numbers array for pagination
   const getPageNumbers = () => {
     const pages = [];
-    const maxPagesToShow = 5; // Show at most 5 page numbers
+    const maxPagesToShow = 5;
     
     if (totalPages <= maxPagesToShow) {
-      // If we have 5 or fewer pages, show all of them
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always include first page
       pages.push(1);
       
-      // Calculate start and end points
       let start = Math.max(2, currentPage - 1);
       let end = Math.min(totalPages - 1, currentPage + 1);
       
-      // Adjust to show 3 pages when possible
       if (currentPage === 1) {
         end = 3;
       } else if (currentPage === totalPages) {
         start = totalPages - 2;
       }
       
-      // Add ellipsis after page 1 if needed
       if (start > 2) {
         pages.push('ellipsis');
       }
       
-      // Add middle pages
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
       
-      // Add ellipsis before last page if needed
       if (end < totalPages - 1) {
         pages.push('ellipsis');
       }
       
-      // Always include last page if more than 1 page
       if (totalPages > 1) {
         pages.push(totalPages);
       }
@@ -202,13 +221,39 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
     return pages;
   };
 
+  // Handle create article
+  const handleCreateArticle = async (values: ItemFormValues) => {
+    try {
+      await createLibraryItem(
+        values.designation,
+        values.lot,
+        values.unite as ItemUnit,
+        values.prix_unitaire,
+        values.bibliotheque_id || projet.id,
+        values.description,
+        values.subCategory,
+        values.tags
+      );
+      
+      // Refresh items
+      const fetchedItems = await getLibraryItems(selectedLibrary);
+      setItems(fetchedItems as unknown as LibraryItem[] || []);
+      
+      setIsCreateArticleOpen(false);
+      form.reset();
+      toast.success('Article créé avec succès');
+    } catch (error) {
+      console.error('Error creating article:', error);
+      toast.error('Erreur lors de la création de l\'article');
+    }
+  };
+
   // Add an item to the project
   const handleAddItem = (item: LibraryItem) => {
     const localisation = selectedSurface 
       ? { niveau: "Actuel", piece: selectedSurface.nom } 
       : { niveau: "RDC", piece: "Salon" };
     
-    // Set the quantity based on surface area if applicable
     let quantite = 1;
     if (selectedSurface && item.unite === "M2") {
       quantite = selectedSurface.superficie;
@@ -223,7 +268,8 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
       unite: item.unite,
       prix_unitaire: item.prix_unitaire,
       localisation: localisation,
-      surfaceId: selectedSurface?.id
+      surfaceId: selectedSurface?.id,
+      color: '#4ECDC4'
     };
     
     onAddOuvrage(newOuvrage);
@@ -262,23 +308,36 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
         className={`sidebar flex flex-col h-full relative transition-all duration-300 border-r bg-white`} 
         style={{ width: isCollapsed ? '50px' : `${panelWidth}px` }}
       >
-        {/* Collapse/Expand button and resize handle */}
+        {/* Resize handle */}
         <div 
-          ref={resizeRef}
-          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white border border-gray-200 shadow-md rounded-full w-6 h-6 flex items-center justify-center cursor-pointer z-10 transform transition-all"
-          onClick={toggleCollapse}
-          title={isCollapsed ? "Expand panel" : "Resize panel"}
-        >
-          <ChevronRight className={`h-4 w-4 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} />
-        </div>
+          className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-blue-300 transition-colors z-20"
+          onMouseDown={handleResizeStart}
+        />
+        <div 
+          className="absolute right-0.5 top-0 bottom-0 w-0.5 bg-gray-200"
+        />
         
         {isCollapsed ? (
           <div className="flex flex-col items-center p-2">
             <span className="text-xs font-medium text-gray-500 rotate-90 mt-4">Bibliothèque</span>
+            <div className="mt-8">
+              <PanelToggle
+                isCollapsed={isCollapsed}
+                onToggle={toggleCollapse}
+                position="left"
+              />
+            </div>
           </div>
         ) : (
           <div className="p-2 overflow-hidden">
-            <h2 className="w-full text-center text-lg font-semibold mb-4 text-primary">Bibliothèque</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-primary">Bibliothèque</h2>
+              <PanelToggle
+                isCollapsed={isCollapsed}
+                onToggle={toggleCollapse}
+                position="left"
+              />
+            </div>
             
             {selectedSurface && (
               <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
@@ -289,53 +348,59 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
             )}
             
             <div className="space-y-3">
-              {/* Library Selection */}
-              <Select value={selectedLibrary} onValueChange={setSelectedLibrary}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choisir une bibliothèque" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les bibliothèques</SelectItem>
-                  {(libraries || []).map(library => (
-                    <SelectItem key={library.id} value={library.id}>{library.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Library Selection with Search */}
+              <SearchableSelect
+                value={selectedLibrary}
+                onChange={setSelectedLibrary}
+                options={libraries.map(lib => lib.name)}
+                placeholder="Choisir une bibliothèque"
+              />
               
-              {/* Search input */}
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Rechercher un article..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              {/* Search input with create button */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Rechercher un article..."
+                    className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsCreateArticleOpen(true)}
+                  title="Créer un nouvel article"
+                  className="px-3"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
               
-              {/* Library filter + Other filters */}
-              <BibliothequeFilter
-                categoryFilter={selectedLot}
-                setCategoryFilter={setSelectedLot}
-                subCategoryFilter={selectedSubCategory}
-                setSubCategoryFilter={setSelectedSubCategory}
-                unitFilter={selectedUnit}
-                setUnitFilter={setSelectedUnit}
-                categories={uniqueLots}
-                uniqueSubCategories={uniqueSubCategories}
-                uniqueUnits={uniqueUnits}
-                filteredByLibraryItems={items || []}
-                selectedLibrary={selectedLibrary}
-                setSelectedLibrary={setSelectedLibrary}
-                libraries={libraries || []}
-                compact={true}
-                customLabels={{lot: "Lot", subCategory: "Cat", unit: "Unit"}}
-                customIcons={{
-                  lot: <Package className="h-4 w-4" />,
-                  subCategory: <Tag className="h-4 w-4" />,
-                  unit: <Ruler className="h-4 w-4" />
-                }}
-              />
+              {/* Filters with search functionality */}
+              <div className="space-y-2">
+                <SearchableSelect
+                  value={selectedLot}
+                  onChange={setSelectedLot}
+                  options={uniqueLots}
+                  placeholder="Tous les lots"
+                />
+                
+                <SearchableSelect
+                  value={selectedSubCategory}
+                  onChange={setSelectedSubCategory}
+                  options={uniqueSubCategories}
+                  placeholder="Toutes les catégories"
+                />
+                
+                <SearchableSelect
+                  value={selectedUnit}
+                  onChange={setSelectedUnit}
+                  options={uniqueUnits}
+                  placeholder="Toutes les unités"
+                />
+              </div>
               
               {/* Library items list with pagination */}
               <div className="space-y-2 mt-4 h-[calc(100vh-340px)] overflow-y-auto">
@@ -355,10 +420,12 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
                     {paginatedItems.map((item) => (
                       <li key={item.id} className="bg-white border rounded-md p-1 shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-start">
-                          <div className="w-[85%]">
+                          <div style={{ width: `${Math.max(85, (panelWidth - 100) / panelWidth * 100)}%` }}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <p className="font-medium text-xs truncate">{truncateText(item.designation, 25)}</p>
+                                <p className="font-medium text-xs truncate">
+                                  {truncateText(item.designation, Math.floor(panelWidth / 12))}
+                                </p>
                               </TooltipTrigger>
                               <TooltipContent>
                                 {item.designation}
@@ -368,8 +435,8 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
                             <div className="flex justify-between text-xs text-gray-500">
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="truncate max-w-[120px]">
-                                    {truncateText(item.lot || '', 15)} - {truncateText(item.subCategory || '', 10)}
+                                  <span className="truncate" style={{ maxWidth: `${Math.floor(panelWidth / 3)}px` }}>
+                                    {truncateText(item.lot || '', Math.floor(panelWidth / 20))} - {truncateText(item.subCategory || '', Math.floor(panelWidth / 30))}
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -382,11 +449,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 w-7 p-0 rounded-full bg-metrBlue text-white hover:bg-blue-800"
+                            className="h-7 w-7 p-0 rounded-full bg-metrBlue text-white hover:bg-blue-800 flex-shrink-0"
                             onClick={() => handleAddItem(item)}
                             title={`Ajouter et mesurer (${getMeasurementType(item.unite)})`}
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            <Plus className="h-4 w-4" />
                             <span className="sr-only">Ajouter</span>
                           </Button>
                         </div>
@@ -437,6 +504,18 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
           </div>
         )}
       </div>
+
+      {/* Create Article Dialog */}
+      <CreateArticleDialog
+        open={isCreateArticleOpen}
+        onOpenChange={setIsCreateArticleOpen}
+        isEditMode={false}
+        categories={CATEGORIES}
+        units={UNITS}
+        libraries={libraries.map(lib => lib.name)}
+        form={form}
+        onSubmit={handleCreateArticle}
+      />
     </TooltipProvider>
   );
 };

@@ -95,7 +95,10 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
     
     const handleDragLeave = (e: DragEvent) => {
       e.preventDefault();
-      setIsDragging(false);
+      // Only set dragging to false if we're leaving the drop zone entirely
+      if (!dropZone.contains(e.relatedTarget as Node)) {
+        setIsDragging(false);
+      }
     };
     
     const handleDrop = (e: DragEvent) => {
@@ -151,7 +154,7 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
       {!plan && !isCalibrating && (
         <div 
           ref={dropZoneRef}
-          className={`absolute inset-0 flex items-center justify-center bg-white ${
+          className={`absolute inset-0 flex items-center justify-center bg-white transition-colors ${
             isDragging ? 'bg-blue-50 border-2 border-dashed border-blue-300' : ''
           }`}
         >
@@ -169,6 +172,11 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
             >
               Sélectionner un fichier DWG
             </Button>
+            {isDragging && (
+              <div className="mt-4 text-blue-600 font-medium">
+                Relâchez le fichier pour l'importer
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useCalibrationContext } from '@/contexts/CalibrationContext';
@@ -60,7 +61,7 @@ const PlanViewer = ({
     const canvas = new FabricCanvas(canvasRef.current, {
       width: containerRef.current?.clientWidth || 800,
       height: containerRef.current?.clientHeight || 600,
-      selection: true,
+      selection: !isCalibrating,
       backgroundColor: '#f9f9f9'
     });
     
@@ -132,6 +133,19 @@ const PlanViewer = ({
     };
   }, []);
   
+  // Update canvas selection based on calibration state
+  useEffect(() => {
+    if (fabricCanvas) {
+      fabricCanvas.selection = !isCalibrating;
+      fabricCanvas.getObjects().forEach(obj => {
+        if (obj.strokeWidth !== 1) { // Skip background
+          obj.selectable = !isCalibrating;
+        }
+      });
+      fabricCanvas.renderAll();
+    }
+  }, [isCalibrating, fabricCanvas]);
+  
   // Handle window resize
   useEffect(() => {
     if (!fabricCanvas || !containerRef.current) return;
@@ -152,6 +166,12 @@ const PlanViewer = ({
 
   // Handle measurement tool change
   const handleToolChange = (tool: MeasurementTool) => {
+    // Disable tool changes during calibration
+    if (isCalibrating) {
+      toast.info('Les outils de mesure sont désactivés pendant la calibration');
+      return;
+    }
+    
     setActiveTool(tool);
     setIsDrawing(false);
     
@@ -175,7 +195,7 @@ const PlanViewer = ({
 
   // Handle mouse down for drawing
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (activeTool !== 'surface' && activeTool !== 'length') return;
+    if (isCalibrating || (activeTool !== 'surface' && activeTool !== 'length')) return;
     if (!fabricCanvas) return;
     
     setIsDrawing(true);
@@ -222,7 +242,7 @@ const PlanViewer = ({
   
   // Handle mouse move for drawing
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !fabricCanvas) return;
+    if (!isDrawing || !fabricCanvas || isCalibrating) return;
     
     const activeObj = fabricCanvas.getActiveObject();
     if (!activeObj) return;
@@ -248,14 +268,9 @@ const PlanViewer = ({
         });
       }
     } else if (activeTool === 'length' && activeObj instanceof Line) {
-      // Fix: Access Line coordinates using specific fabric.js API
-      const coords = (activeObj as any).coords || [];
-      const p1 = { x: coords[0], y: coords[1] };
-      const p2 = { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
-      
       activeObj.set({ 
-        x2: p2.x, 
-        y2: p2.y 
+        x2: e.nativeEvent.offsetX, 
+        y2: e.nativeEvent.offsetY 
       });
     }
     
@@ -264,7 +279,7 @@ const PlanViewer = ({
   
   // Handle mouse up for drawing
   const handleMouseUp = () => {
-    if (!isDrawing || !fabricCanvas) return;
+    if (!isDrawing || !fabricCanvas || isCalibrating) return;
     
     setIsDrawing(false);
     
@@ -283,7 +298,6 @@ const PlanViewer = ({
         toast.success(`Surface: ${area.toFixed(2)} m²`);
       }
     } else if (activeTool === 'length' && activeObj instanceof Line) {
-      // Fix: Calculate length using coordinates
       const x1 = activeObj.x1 || 0;
       const y1 = activeObj.y1 || 0;
       const x2 = activeObj.x2 || 0;
@@ -329,7 +343,7 @@ const PlanViewer = ({
       {/* Plan canvas */}
       <canvas ref={canvasRef} className="absolute inset-0" />
       
-      {/* Measurement toolbar at the top */}
+      {/* Measurement toolbar at the top (only when not calibrating) */}
       {!isCalibrating && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
           <MeasurementToolbar 
@@ -339,8 +353,8 @@ const PlanViewer = ({
         </div>
       )}
       
-      {/* Surface type selection when surface tool is active */}
-      {activeTool === 'surface' && (
+      {/* Surface type selection when surface tool is active and not calibrating */}
+      {activeTool === 'surface' && !isCalibrating && (
         <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-10 bg-white p-2 rounded-md shadow-sm flex gap-2">
           <Button 
             variant={surfaceType === 'rectangle' ? "default" : "outline"}
@@ -387,13 +401,15 @@ const PlanViewer = ({
                   rounded-sm pointer-events-none"
       ></div>
       
-      {/* Calibration toolbar that appears at the bottom during calibration */}
+      {/* Calibration toolbar that appears above the plan controls during calibration */}
       {isCalibrating && calibrationStep === 2 && (
-        <CalibrationToolbar elementType={currentElementType} />
+        <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-20">
+          <CalibrationToolbar elementType={currentElementType} />
+        </div>
       )}
       
-      {/* Plan controls - zoom, pan, rotate */}
-      <div className="absolute bottom-4 right-4 bg-white p-2 rounded-md shadow-sm flex flex-col gap-1">
+      {/* Plan controls - zoom, pan, rotate (always visible for navigation) */}
+      <div className="absolute bottom-4 right-4 bg-white p-2 rounded-md shadow-sm flex flex-col gap-1 z-10">
         <Button variant="outline" size="sm" onClick={() => setScale(scale * 1.2)}>
           <Maximize className="h-4 w-4" />
           <span className="ml-1">Zoom +</span>
