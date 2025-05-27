@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Trash2, Edit, Plus, Download } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ChevronDown, ChevronUp, Trash2, Edit, Plus, Download, Undo2, Redo2 } from 'lucide-react';
 import { Projet, Surface, Ouvrage as OuvrageType } from '@/types/metr';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import InlineEdit from './InlineEdit';
 import ColorPicker from './ColorPicker';
 import PanelToggle from '@/components/ui/panel-toggle';
 import { toast } from 'sonner';
+import { MeasurementContext } from '@/contexts/MeasurementContext';
 
 interface RightPanelProps {
   projet: Projet;
@@ -21,6 +22,11 @@ interface GroupedOuvrage extends OuvrageType {
   color?: string;
   measurements?: (OuvrageType & { color?: string })[];
   isExpanded?: boolean;
+}
+
+interface HistoryState {
+  ouvrages: OuvrageType[];
+  timestamp: number;
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({
@@ -39,6 +45,88 @@ const RightPanel: React.FC<RightPanelProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [hoveredOuvrageId, setHoveredOuvrageId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [history, setHistory] = useState<HistoryState[]>([]);
+  const [currentHistoryIndex, setCurrentHistoryIndex] = useState(-1);
+  const [isUndoRedoInProgress, setIsUndoRedoInProgress] = useState(false);
+  const { startMeasurement } = React.useContext(MeasurementContext);
+
+  // Function to save current state to history
+  const saveToHistory = useCallback((newOuvrages: OuvrageType[]) => {
+    if (isUndoRedoInProgress) return;
+
+    const newHistoryState: HistoryState = {
+      ouvrages: [...newOuvrages],
+      timestamp: Date.now()
+    };
+
+    setHistory(prev => {
+      // Remove any future states if we're not at the end
+      const newHistory = prev.slice(0, currentHistoryIndex + 1);
+      newHistory.push(newHistoryState);
+      return newHistory;
+    });
+    setCurrentHistoryIndex(prev => prev + 1);
+  }, [currentHistoryIndex, isUndoRedoInProgress]);
+
+  // Initialize history with current state
+  useEffect(() => {
+    if (projet.ouvrages && history.length === 0) {
+      saveToHistory(projet.ouvrages);
+    }
+  }, [projet.ouvrages, history.length, saveToHistory]);
+
+  // Undo function
+  const handleUndo = useCallback(() => {
+    if (currentHistoryIndex > 0) {
+      setIsUndoRedoInProgress(true);
+      const previousState = history[currentHistoryIndex - 1];
+      projet.ouvrages = [...previousState.ouvrages];
+      setCurrentHistoryIndex(prev => prev - 1);
+      setOuvragesGrouped(prev => ({...prev}));
+      toast.success('Action annulée');
+      setIsUndoRedoInProgress(false);
+    }
+  }, [currentHistoryIndex, history, projet]);
+
+  // Redo function
+  const handleRedo = useCallback(() => {
+    if (currentHistoryIndex < history.length - 1) {
+      setIsUndoRedoInProgress(true);
+      const nextState = history[currentHistoryIndex + 1];
+      projet.ouvrages = [...nextState.ouvrages];
+      setCurrentHistoryIndex(prev => prev + 1);
+      setOuvragesGrouped(prev => ({...prev}));
+      toast.success('Action rétablie');
+      setIsUndoRedoInProgress(false);
+    }
+  }, [currentHistoryIndex, history, projet]);
+
+  // Keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if Ctrl (or Cmd on Mac) is pressed
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey) {
+        switch (event.key.toLowerCase()) {
+          case 'z':
+            event.preventDefault(); // Prevent default browser undo
+            handleUndo();
+            break;
+          case 'y':
+            event.preventDefault(); // Prevent default browser redo
+            handleRedo();
+            break;
+        }
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleUndo, handleRedo]);
 
   useEffect(() => {
     // Group ouvrages by designation first, then by lot and subcategory
@@ -157,12 +245,36 @@ const RightPanel: React.FC<RightPanelProps> = ({
   // Handle inline edit save
   const handleInlineEditSave = async (ouvrageId: string, field: string, value: string | number) => {
     try {
-      // Implement actual save logic here
-      await saveOuvrage(ouvrageId, field, value);
-      toast.success('Modification enregistrée');
+      const ouvrage = projet.ouvrages.find(o => o.id === ouvrageId);
+      if (ouvrage) {
+        // Update the ouvrage
+        ouvrage[field] = value;
+        
+        // Update the grouped ouvrages to reflect the change
+        setOuvragesGrouped(prev => {
+          const newGrouped = { ...prev };
+          // Find and update the ouvrage in the grouped structure
+          Object.keys(newGrouped).forEach(groupKey => {
+            Object.keys(newGrouped[groupKey]).forEach(subCat => {
+              const ouvrageIndex = newGrouped[groupKey][subCat].findIndex(
+                o => o.id === ouvrageId
+              );
+              if (ouvrageIndex !== -1) {
+                newGrouped[groupKey][subCat][ouvrageIndex] = {
+                  ...newGrouped[groupKey][subCat][ouvrageIndex],
+                  [field]: value
+                };
+              }
+            });
+          });
+          return newGrouped;
+        });
+
+        toast.success('Modification enregistrée');
+      }
     } catch (error) {
-      toast.error('Erreur lors de la modification');
       console.error('Error saving ouvrage:', error);
+      toast.error('Erreur lors de la modification');
     }
   };
 
@@ -174,12 +286,37 @@ const RightPanel: React.FC<RightPanelProps> = ({
 
   // Handle delete ouvrage
   const handleDeleteOuvrage = (ouvrageId: string, designation?: string) => {
-    if (designation) {
-      console.log(`Deleting all measurements for ${designation}`);
-      toast.success('Tous les articles supprimés');
-    } else {
-      console.log(`Deleting measurement ${ouvrageId}`);
-      toast.success('Mesure supprimée');
+    try {
+      if (designation) {
+        const measurementsToDelete = projet.ouvrages.filter(o => o.designation === designation);
+        
+        if (measurementsToDelete.length > 0) {
+          const confirmDelete = window.confirm(
+            `Vous êtes sur le point de supprimer ${measurementsToDelete.length} mesure(s) pour l'article "${designation}".\n\nÊtes-vous sûr de vouloir continuer ?`
+          );
+          
+          if (confirmDelete) {
+            projet.ouvrages = projet.ouvrages.filter(o => o.designation !== designation);
+            saveToHistory(projet.ouvrages);
+            toast.success(`${measurementsToDelete.length} mesure(s) supprimée(s)`);
+          }
+        }
+      } else {
+        const confirmDelete = window.confirm(
+          'Êtes-vous sûr de vouloir supprimer cette mesure ?'
+        );
+        
+        if (confirmDelete) {
+          projet.ouvrages = projet.ouvrages.filter(o => o.id !== ouvrageId);
+          saveToHistory(projet.ouvrages);
+          toast.success('Mesure supprimée');
+        }
+      }
+
+      setOuvragesGrouped(prev => ({...prev}));
+    } catch (error) {
+      console.error('Error deleting ouvrage:', error);
+      toast.error('Erreur lors de la suppression');
     }
   };
 
@@ -191,8 +328,83 @@ const RightPanel: React.FC<RightPanelProps> = ({
 
   // Handle add same article
   const handleAddSameArticle = (ouvrage: GroupedOuvrage) => {
-    console.log(`Adding same article as ${ouvrage.designation}`);
-    toast.info('Nouvelle mesure du même article activée');
+    try {
+      const newOuvrage: OuvrageType = {
+        id: crypto.randomUUID(),
+        designation: ouvrage.designation,
+        lot: ouvrage.lot,
+        subCategory: ouvrage.subCategory,
+        quantite: 0,
+        unite: ouvrage.unite,
+        prix_unitaire: ouvrage.prix_unitaire,
+        localisation: ouvrage.localisation,
+        surfaceId: ouvrage.surfaceId,
+        coefficient: ouvrage.coefficient
+      };
+
+      // Add the new ouvrage to the project
+      if (projet.ouvrages) {
+        projet.ouvrages.push(newOuvrage);
+      } else {
+        projet.ouvrages = [newOuvrage];
+      }
+
+      // Force expand the parent article
+      setExpandedOuvrages(prev => {
+        if (!prev.includes(ouvrage.designation)) {
+          return [...prev, ouvrage.designation];
+        }
+        return prev;
+      });
+
+      // Update the grouped ouvrages
+      setOuvragesGrouped(prev => {
+        const newGrouped = { ...prev };
+        // Find the group and subcategory for this ouvrage
+        const groupKey = viewMode === 'lot' 
+          ? ouvrage.lot
+          : ouvrage.localisation 
+            ? `${ouvrage.localisation.niveau} - ${ouvrage.localisation.piece}` 
+            : 'Non localisé';
+        
+        const subCat = ouvrage.subCategory || 'Non classé';
+        
+        if (newGrouped[groupKey]?.[subCat]) {
+          // Find the existing grouped ouvrage
+          const existingGroup = newGrouped[groupKey][subCat].find(
+            g => g.designation === ouvrage.designation
+          );
+          
+          if (existingGroup) {
+            // Add the new measurement to the existing group
+            existingGroup.measurements = [
+              ...(existingGroup.measurements || []),
+              newOuvrage
+            ];
+          }
+        }
+        
+        return newGrouped;
+      });
+
+      // Trigger the appropriate measurement tool based on the unit
+      const unit = ouvrage.unite.toUpperCase();
+      if (unit === 'U' || unit === 'PCE') {
+        // For units, use the counter tool
+        startMeasurement(newOuvrage.id, 'U');
+      } else if (unit === 'M2' || unit === 'M3') {
+        // For surfaces and volumes, use the surface tool
+        startMeasurement(newOuvrage.id, 'M2');
+      } else if (unit === 'ML' || unit === 'CM' || unit === 'M' || unit === 'KM') {
+        // For lengths, use the length tool
+        startMeasurement(newOuvrage.id, 'ML');
+      }
+
+      toast.success('Nouvel article ajouté');
+    } catch (error) {
+      console.error('Error adding new article:', error);
+      toast.error('Erreur lors de l\'ajout de l\'article');
+    }
   };
 
   // Handle export
@@ -258,17 +470,41 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 
                 <h2 className="text-lg font-semibold text-center flex-1">Devis</h2>
                 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleExportDevis}
-                  title="Exporter le devis"
-                  className="px-2"
-                  aria-label="Exporter le devis"
-                  disabled={isLoading}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleUndo}
+                    title="Annuler (Ctrl+Z)"
+                    className="px-2"
+                    aria-label="Annuler"
+                    disabled={currentHistoryIndex <= 0}
+                  >
+                    <Undo2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRedo}
+                    title="Rétablir (Ctrl+Y)"
+                    className="px-2"
+                    aria-label="Rétablir"
+                    disabled={currentHistoryIndex >= history.length - 1}
+                  >
+                    <Redo2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleExportDevis}
+                    title="Exporter le devis"
+                    className="px-2"
+                    aria-label="Exporter le devis"
+                    disabled={isLoading}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               
               {/* View mode buttons */}
@@ -353,16 +589,44 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                     <div key={`${ouvrage.designation}-${idx}`} className="bg-white">
                                       {/* Main article header */}
                                       <div 
-                                        className="p-2 hover:bg-gray-50 group cursor-pointer"
+                                        className="p-2 hover:bg-gray-50 group cursor-pointer relative"
                                         onMouseEnter={() => setHoveredOuvrageId(ouvrage.id)}
                                         onMouseLeave={() => setHoveredOuvrageId(null)}
                                         onClick={() => ouvrage.measurements && ouvrage.measurements.length > 0 && toggleOuvrage(ouvrage.designation)}
                                       >
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-1 flex-1">
-                                            {/* Expand/collapse for measurements */}
+                                        {/* Action buttons - positioned absolutely */}
+                                        <div className={`absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 transition-opacity ${hoveredOuvrageId === ouvrage.id ? 'opacity-100' : 'opacity-0'}`}>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="w-4 h-4 p-0 text-gray-500 hover:text-blue-600 bg-white border border-gray-200 rounded"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleReMeasure(ouvrage.id);
+                                            }}
+                                            title="Re-mesurer cet élément"
+                                          >
+                                            <Edit className="h-3 w-3" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="w-4 h-4 p-0 text-gray-500 hover:text-red-600 bg-white border border-gray-200 rounded"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteOuvrage(ouvrage.id, ouvrage.designation);
+                                            }}
+                                            title="Supprimer cet article"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+
+                                        <div className="flex items-center">
+                                          {/* Left side - controls and name */}
+                                          <div className="flex items-center gap-1 w-[60px]">
                                             {ouvrage.measurements && ouvrage.measurements.length > 0 && (
-                                              <div className="w-3 h-3 flex items-center justify-center">
+                                              <div className="w-3 h-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                 {expandedOuvrages.includes(ouvrage.designation) ? 
                                                   <ChevronUp className="h-2 w-2" /> : 
                                                   <ChevronDown className="h-2 w-2" />
@@ -370,7 +634,6 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                               </div>
                                             )}
                                             
-                                            {/* Add same article button */}
                                             <Button
                                               size="sm"
                                               variant="ghost"
@@ -384,34 +647,34 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                               <Plus className="h-3 w-3" />
                                             </Button>
                                             
-                                            {/* Color picker */}
                                             <div className={`transition-opacity ${hoveredOuvrageId === ouvrage.id ? 'opacity-100' : 'opacity-0'}`}>
                                               <ColorPicker
                                                 currentColor={ouvrage.color || '#4ECDC4'}
                                                 onColorChange={(color) => handleColorChange(ouvrage.designation, color)}
                                               />
                                             </div>
-                                            
-                                            {/* Designation with inline edit */}
-                                            <div className={`flex-1 transition-all ${hoveredOuvrageId === ouvrage.id ? 'mr-2' : ''}`}>
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <div className="truncate max-w-[120px]">
-                                                    <InlineEdit
-                                                      value={ouvrage.designation || ''}
-                                                      onSave={(value) => handleInlineEditSave(ouvrage.id, 'designation', value)}
-                                                      className="text-xs font-medium"
-                                                    />
-                                                  </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                  {ouvrage.designation}
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            </div>
                                           </div>
-                                          
-                                          <div className="flex items-center gap-2 text-xs">
+
+                                          {/* Article name with sliding effect */}
+                                          <div className="flex-1 min-w-0 -ml-[60px] group-hover:ml-0 transition-all duration-200">
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div className="truncate">
+                                                  <InlineEdit
+                                                    value={ouvrage.designation || ''}
+                                                    onSave={(value) => handleInlineEditSave(ouvrage.id, 'designation', value)}
+                                                    className="text-xs font-medium"
+                                                  />
+                                                </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                {ouvrage.designation}
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </div>
+
+                                          {/* Right side - values with fixed width */}
+                                          <div className="flex items-center gap-2 text-xs whitespace-nowrap w-[120px] justify-end">
                                             <span>{ouvrage.quantite} {ouvrage.unite}</span>
                                             <span className="relative">
                                               <InlineEdit
@@ -421,36 +684,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                                 className="text-xs text-right w-12"
                                               /> €
                                             </span>
-                                            <span className="font-medium relative">
-                                              {(ouvrage.quantite * ouvrage.prix_unitaire).toFixed(2)} €
-                                              
-                                              {/* Action buttons with white background */}
-                                              <div className={`absolute right-0 top-0 flex gap-1 transition-opacity ${hoveredOuvrageId === ouvrage.id ? 'opacity-100' : 'opacity-0'}`}>
-                                                <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  className="w-4 h-4 p-0 text-gray-500 hover:text-blue-600 bg-white border border-gray-200 rounded"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleReMeasure(ouvrage.id);
-                                                  }}
-                                                  title="Re-mesurer cet élément"
-                                                >
-                                                  <Edit className="h-3 w-3" />
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  className="w-4 h-4 p-0 text-gray-500 hover:text-red-600 bg-white border border-gray-200 rounded"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteOuvrage(ouvrage.id, ouvrage.designation);
-                                                  }}
-                                                  title="Supprimer cet article"
-                                                >
-                                                  <Trash2 className="h-3 w-3" />
-                                                </Button>
-                                              </div>
+                                            <span className="font-medium">
+                                              {Math.round(ouvrage.quantite * ouvrage.prix_unitaire)} €
                                             </span>
                                           </div>
                                         </div>

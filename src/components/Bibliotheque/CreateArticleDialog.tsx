@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,6 +33,7 @@ interface CreateArticleDialogProps {
   libraries: string[];
   form: any;
   onSubmit: (values: ItemFormValues) => void;
+  predefinedLots?: { id: string; name: string }[];
 }
 
 const CreateArticleDialog: React.FC<CreateArticleDialogProps> = ({
@@ -44,8 +44,28 @@ const CreateArticleDialog: React.FC<CreateArticleDialogProps> = ({
   units,
   libraries,
   form,
-  onSubmit
+  onSubmit,
+  predefinedLots = []
 }) => {
+  const [isAddingNewSubCategory, setIsAddingNewSubCategory] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) {
+      // Reset state when dialog closes
+      setIsAddingNewSubCategory(false);
+    }
+  }, [open]);
+
+  const handleSubCategoryChange = (value: string) => {
+    if (value === 'addNew') {
+      setIsAddingNewSubCategory(true);
+      form.setValue('subCategory', ''); // Clear current value for new input
+    } else {
+      setIsAddingNewSubCategory(false);
+      form.setValue('subCategory', value); // Set selected value
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] backdrop-blur-md bg-white/95 border-white/20">
@@ -89,11 +109,19 @@ const CreateArticleDialog: React.FC<CreateArticleDialogProps> = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
+                        {predefinedLots.length > 0 ? (
+                          predefinedLots.map((lot) => (
+                            <SelectItem key={lot.id} value={lot.name}>
+                              {lot.id} - {lot.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          categories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -137,7 +165,37 @@ const CreateArticleDialog: React.FC<CreateArticleDialogProps> = ({
                   <FormItem>
                     <FormLabel>Sous-catégorie*</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      {isAddingNewSubCategory ? (
+                        <Input 
+                          {...field} 
+                          placeholder="Nouvelle sous-catégorie..."
+                          onBlur={() => {
+                             // Optionally revert to select if input is empty on blur
+                            if (!field.value) setIsAddingNewSubCategory(false);
+                          }}
+                        />
+                      ) : (
+                        <Select 
+                          onValueChange={handleSubCategoryChange} // Use custom handler
+                          value={field.value || ''} // Ensure value is controlled
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner ou créer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {/* Existing subcategories */}
+                            {categories.map((subCat) => (
+                              <SelectItem key={subCat} value={subCat}>
+                                {subCat}
+                              </SelectItem>
+                            ))}
+                            {/* Option to add new */}
+                            <SelectItem key="addNew" value="addNew" className="font-semibold text-blue-600">
+                                + Ajouter une sous-catégorie
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                     </FormControl>
                     <FormMessage />
                   </FormItem>

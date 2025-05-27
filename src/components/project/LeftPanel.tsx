@@ -1,14 +1,13 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Projet, Surface } from '@/types/metr';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Package, Tag, Ruler, Plus } from 'lucide-react';
+import { Search, Package, Tag, Ruler, Plus, ChevronDown, ChevronRight, Mountain, BrickWall, LayoutGrid, Thermometer, Grid, Layers, Paintbrush, DoorClosed, Square, Plug, Droplet, Umbrella, Shield, AlignVerticalSpaceBetween, TreePine, Library } from 'lucide-react';
 import { LibraryItem, ItemUnit } from '@/types/library';
 import { useLibraryDB } from '@/hooks/useLibraryDB';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import BibliothequeFilter from '@/components/Bibliotheque/BibliothequeFilter';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CreateArticleDialog, { ItemFormValues } from '@/components/Bibliotheque/CreateArticleDialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -46,9 +45,97 @@ const CATEGORIES = [
   'Peinture',
 ];
 
+// Add lot icons mapping
+const LOT_ICONS: Record<string, React.ElementType> = {
+  'TERRASSEMENTS GÉNÉRAUX': Mountain,
+  'GROS ŒUVRE - MAÇONNERIE': BrickWall,
+  'MÉTALLERIE, FERRONNERIE': Ruler,
+  'PLÂTRERIE': LayoutGrid,
+  'ISOLATION': Thermometer,
+  'CARRELAGES, REVÊTEMENTS': Grid,
+  'SOLS SOUPLES': Layers,
+  'PEINTURES': Paintbrush,
+  'MENUISERIES INTÉRIEURES': DoorClosed,
+  'MENUISERIES EXTÉRIEURES': Square,
+  'ÉLECTRICITÉ COURANTS FORTS': Plug,
+  'PLOMBERIES SANITAIRES': Droplet,
+  'COUVERTURE, ZINGUERIE': Umbrella,
+  'ÉTANCHÉITÉ': Shield,
+  'STORES ET FERMETURES': AlignVerticalSpaceBetween,
+  'VRD, ESPACES EXTÉRIEURS': TreePine,
+  'default': Package // Using Package as a default icon
+};
+
+// Define default library data based on OCR text
+const DEFAULT_LIBRARY_ITEMS: LibraryItem[] = [
+  { id: 'dflt-01-01', designation: 'TERRASSEMENTS GÉNÉRAUX', lot: 'TERRASSEMENTS GÉNÉRAUX', subCategory: 'Généraux', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-01-02', designation: 'TERRASSEMENTS GÉNÉRAUX', lot: 'TERRASSEMENTS GÉNÉRAUX', subCategory: 'Autre', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-02-01', designation: 'GROS ŒUVRE - MAÇONNERIE', lot: 'GROS ŒUVRE - MAÇONNERIE', subCategory: 'Murs', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-02-02', designation: 'GROS ŒUVRE - MAÇONNERIE', lot: 'GROS ŒUVRE - MAÇONNERIE', subCategory: 'Dalles', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-03-01', designation: 'GROS ŒUVRE - MAÇONNERIE', lot: 'GROS ŒUVRE - MAÇONNERIE', subCategory: 'Fondations', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-04-01', designation: 'GROS ŒUVRE - MAÇONNERIE', lot: 'GROS ŒUVRE - MAÇONNERIE', subCategory: 'Escaliers', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-05-01', designation: 'GROS ŒUVRE - MAÇONNERIE', lot: 'GROS ŒUVRE - MAÇONNERIE', subCategory: 'Charpente', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-06-01', designation: 'PLÂTRERIE', lot: 'PLÂTRERIE', subCategory: 'Doublage', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-06-02', designation: 'PLÂTRERIE', lot: 'PLÂTRERIE', subCategory: 'Plafonds', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-07-01', designation: 'ISOLATION', lot: 'ISOLATION', subCategory: 'Thermique', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-07-02', designation: 'ISOLATION', lot: 'ISOLATION', subCategory: 'Phonique', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-08-01', designation: 'PLÂTRERIE', lot: 'PLÂTRERIE', subCategory: 'Enduits', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] }, // Assuming 08 is also Plâtrerie
+  { id: 'dflt-09-01', designation: 'MENUISERIES EXTÉRIEURES', lot: 'MENUISERIES EXTÉRIEURES', subCategory: 'Fenêtres', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-09-02', designation: 'MENUISERIES EXTÉRIEURES', lot: 'MENUISERIES EXTÉRIEURES', subCategory: 'Portes', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-10-01', designation: 'MENUISERIES INTÉRIEURES', lot: 'MENUISERIES INTÉRIEURES', subCategory: 'Portes', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-10-02', designation: 'MENUISERIES INTÉRIEURES', lot: 'MENUISERIES INTÉRIEURES', subCategory: 'Placards', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-11-01', designation: 'GROS ŒUVRE - MAÇONNERIE', lot: 'GROS ŒUVRE - MAÇONNERIE', subCategory: 'Divers', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] }, // Assuming 11 is also Gros Œuvre
+  { id: 'dflt-12-01', designation: 'COUVERTURE, ZINGUERIE', lot: 'COUVERTURE, ZINGUERIE', subCategory: 'Couverture', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-12-02', designation: 'COUVERTURE, ZINGUERIE', lot: 'COUVERTURE, ZINGUERIE', subCategory: 'Zinguerie', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-13-01', designation: 'ÉTANCHÉITÉ', lot: 'ÉTANCHÉITÉ', subCategory: 'Toiture', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-13-02', designation: 'ÉTANCHÉITÉ', lot: 'ÉTANCHÉITÉ', subCategory: 'Façade', unite: 'U', prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-14-01', designation: 'CARRELAGES, REVÊTEMENTS', lot: 'CARRELAGES, REVÊTEMENTS', subCategory: 'Carrelage Sol', unite: 'M2' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-14-02', designation: 'CARRELAGES, REVÊTEMENTS', lot: 'CARRELAGES, REVÊTEMENTS', subCategory: 'Carrelage Mur', unite: 'M2' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-14-03', designation: 'CARRELAGES, REVÊTEMENTS', lot: 'CARRELAGES, REVÊTEMENTS', subCategory: 'Parquet', unite: 'M2' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-15-01', designation: 'PEINTURES', lot: 'PEINTURES', subCategory: 'Murs Intérieurs', unite: 'M2' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-15-02', designation: 'PEINTURES', lot: 'PEINTURES', subCategory: 'Plafonds', unite: 'M2' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-16-01', designation: 'MÉTALLERIE, FERRONNERIE', lot: 'MÉTALLERIE, FERRONNERIE', subCategory: 'Garde-corps', unite: 'ML' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-16-02', designation: 'MÉTALLERIE, FERRONNERIE', lot: 'MÉTALLERIE, FERRONNERIE', subCategory: 'Escaliers', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-17-01', designation: 'PLOMBERIES SANITAIRES', lot: 'PLOMBERIES SANITAIRES', subCategory: 'WC', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-17-02', designation: 'PLOMBERIES SANITAIRES', lot: 'PLOMBERIES SANITAIRES', subCategory: 'Lavabos', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-18-01', designation: 'CVC', lot: 'CVC', subCategory: 'Chauffage', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-18-02', designation: 'CVC', lot: 'CVC', subCategory: 'Climatisation', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-19-01', designation: 'ÉLECTRICITÉ COURANTS FORTS', lot: 'ÉLECTRICITÉ COURANTS FORTS', subCategory: 'Prises', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-19-02', designation: 'ÉLECTRICITÉ COURANTS FORTS', lot: 'ÉLECTRICITÉ COURANTS FORTS', subCategory: 'Éclairage', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-20-01', designation: 'COURANTS FAIBLES', lot: 'COURANTS FAIBLES', subCategory: 'RJ45', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-20-02', designation: 'COURANTS FAIBLES', lot: 'COURANTS FAIBLES', subCategory: 'Alarme', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-21-01', designation: 'ÉQUIPEMENTS', lot: 'ÉQUIPEMENTS', subCategory: 'Cuisine', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-21-02', designation: 'ÉQUIPEMENTS', lot: 'ÉQUIPEMENTS', subCategory: 'Salle de bain', unite: 'U' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-22-01', designation: 'AMÉNAGEMENTS INTÉRIEURS', lot: 'AMÉNAGEMENTS INTÉRIEURS', subCategory: 'Faux Plafonds', unite: 'M2' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-22-02', designation: 'AMÉNAGEMENTS INTÉRIEURS', lot: 'AMÉNAGEMENTS INTÉRIEURS', subCategory: 'Sols', unite: 'M2' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-23-01', designation: 'VRD, ESPACES EXTÉRIEURS', lot: 'VRD, ESPACES EXTÉRIEURS', subCategory: 'VRD', unite: 'ML' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-23-02', designation: 'VRD, ESPACES EXTÉRIEURS', lot: 'VRD, ESPACES EXTÉRIEURS', subCategory: 'Espaces Verts', unite: 'M2' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] },
+  { id: 'dflt-24-01', designation: 'NETTOYAGE', lot: 'NETTOYAGE', subCategory: 'Fin de chantier', unite: 'M2' as ItemUnit, prix_unitaire: 0, description: '', bibliotheque_id: 'default', date_creation: new Date().toISOString(), actif: true, tags: [] }, // Assuming 24 is Nettoyage
+];
+
+// Add predefined lots with numbering
+const PREDEFINED_LOTS = [
+  { id: '01', name: 'TERRASSEMENTS GÉNÉRAUX' },
+  { id: '02', name: 'GROS ŒUVRE - MAÇONNERIE' },
+  { id: '03', name: 'MÉTALLERIE, FERRONNERIE' },
+  { id: '04', name: 'PLÂTRERIE' },
+  { id: '05', name: 'ISOLATION' },
+  { id: '06', name: 'CARRELAGES, REVÊTEMENTS' },
+  { id: '07', name: 'SOLS SOUPLES' },
+  { id: '08', name: 'PEINTURES' },
+  { id: '09', name: 'MENUISERIES INTÉRIEURES' },
+  { id: '10', name: 'MENUISERIES EXTÉRIEURES' },
+  { id: '11', name: 'ÉLECTRICITÉ COURANTS FORTS' },
+  { id: '12', name: 'PLOMBERIES SANITAIRES' },
+  { id: '13', name: 'COUVERTURE, ZINGUERIE' },
+  { id: '14', name: 'ÉTANCHÉITÉ' },
+  { id: '15', name: 'STORES ET FERMETURES' },
+  { id: '16', name: 'VRD, ESPACES EXTÉRIEURS' }
+];
+
 const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuvrage }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLibrary, setSelectedLibrary] = useState<string>('all');
+  const [selectedLibrary, setSelectedLibrary] = useState<string>('default'); // Set default library as initially selected
   const [selectedLot, setSelectedLot] = useState<string>('all');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('all');
   const [selectedUnit, setSelectedUnit] = useState<string>('all');
@@ -62,6 +149,8 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   const resizeRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
+  const [expandedLots, setExpandedLots] = useState<string[]>([]);
+  const [expandedSubCategories, setExpandedSubCategories] = useState<string[]>([]); // New state for subcategory expansion
   
   const {
     isLoading,
@@ -88,43 +177,59 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Attempt to initialize with sample data and fetch libraries/items
         await initializeWithSampleData();
         const fetchedLibraries = await getLibraries();
-        setLibraries(fetchedLibraries || []);
         
-        const fetchedItems = await getLibraryItems();
-        setItems(fetchedItems as unknown as LibraryItem[] || []);
+        // Add default library option if it doesn't exist
+        const defaultLibraryExists = fetchedLibraries.some(lib => lib.id === 'default' || lib.name === 'Bibliothèque par défaut');
+        if (!defaultLibraryExists) {
+          setLibraries([{ id: 'default', name: 'Bibliothèque par défaut' }, ...fetchedLibraries || []]);
+        } else {
+           setLibraries(fetchedLibraries || []);
+        }
+
+        // If no library is selected or 'default' is selected, use default items
+        if (!selectedLibrary || selectedLibrary === 'default') {
+           setItems(DEFAULT_LIBRARY_ITEMS);
+        } else { // Otherwise, fetch items for the selected library
+           const fetchedItems = await getLibraryItems(selectedLibrary);
+           setItems(fetchedItems as unknown as LibraryItem[] || []);
+        }
+
       } catch (err) {
         console.error('Error loading data:', err);
-        setLibraries([]);
-        setItems([]);
+        // Fallback to default library if loading fails
+        setLibraries([{ id: 'default', name: 'Bibliothèque par défaut' }]);
+        setItems(DEFAULT_LIBRARY_ITEMS);
       }
     };
     
     loadData();
-  }, []);
-  
-  // Update items when selected library changes
+  }, []); // Dependency array is empty to run only once on mount
+
+   // Update items when selected library changes
   useEffect(() => {
     const loadLibraryItems = async () => {
       try {
-        const fetchedItems = await getLibraryItems(selectedLibrary);
-        setItems(fetchedItems as unknown as LibraryItem[] || []);
+        if (selectedLibrary === 'default') {
+          setItems(DEFAULT_LIBRARY_ITEMS);
+        } else {
+          const fetchedItems = await getLibraryItems(selectedLibrary);
+          setItems(fetchedItems as unknown as LibraryItem[] || []);
+        }
         setCurrentPage(1);
       } catch (err) {
-        console.error('Error loading items:', err);
-        setItems([]);
+        console.error('Error loading items for library:', selectedLibrary, err);
+        setItems(DEFAULT_LIBRARY_ITEMS); // Fallback to default if library items fail to load
       }
     };
     
-    loadLibraryItems();
-  }, [selectedLibrary]);
-  
-  const uniqueLots = [...new Set((items || []).map(o => o.lot))];
-  const uniqueSubCategories = [...new Set((items || [])
-    .filter(item => item.subCategory)
-    .map(item => item.subCategory))];
-  const uniqueUnits = [...new Set((items || []).map(item => item.unite))];
+    // Only load if libraries are fetched and a selection is made
+    if(libraries.length > 0 || selectedLibrary === 'default') {
+      loadLibraryItems();
+    }
+  }, [selectedLibrary, libraries]); // Depend on selectedLibrary and libraries
 
   // Setup resize handlers
   useEffect(() => {
@@ -162,23 +267,43 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
     startWidthRef.current = panelWidth;
   };
   
-  // Filter items based on search term and selected filters
-  const filteredItems = (items || []).filter(item => {
-    const matchesSearch = item.designation.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLot = selectedLot === 'all' ? true : item.lot === selectedLot;
-    const matchesSubCategory = selectedSubCategory === 'all' ? true : item.subCategory === selectedSubCategory;
-    const matchesUnit = selectedUnit === 'all' ? true : item.unite === selectedUnit;
-    return matchesSearch && matchesLot && matchesSubCategory && matchesUnit;
-  });
+  // Group items by lot and then by subcategory
+  const groupedItems = (items || []).reduce((acc, item) => {
+    const lot = item.lot || 'Non classé';
+    const subCat = item.subCategory || 'Non classé';
+    
+    if (!acc[lot]) {
+      acc[lot] = {};
+    }
+    if (!acc[lot][subCat]) {
+        acc[lot][subCat] = [];
+    }
 
-  // Get paginated items
-  const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+    // Filter by search term here before grouping
+    if (
+        item.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.lot?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.subCategory?.toLowerCase().includes(searchTerm.toLowerCase())
+    ) {
+        acc[lot][subCat].push(item);
+    }
+    return acc;
+  }, {} as Record<string, Record<string, LibraryItem[]>>);
+
+  const lotEntries = Object.entries(groupedItems);
+
+  // Flatten items for search results
+  const flattenedSearchResults = searchTerm ? Object.values(groupedItems).flatMap(subCategories => 
+    Object.values(subCategories).flatMap(items => items)
+  ) : [];
 
   // Calculate total pages
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(
+    Object.values(groupedItems).reduce((acc, subCategories) => 
+      acc + Object.values(subCategories).reduce((subAcc, items) => subAcc + items.length, 0)
+    , 0) / ITEMS_PER_PAGE
+  );
 
   // Generate page numbers array for pagination
   const getPageNumbers = () => {
@@ -224,24 +349,34 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
   // Handle create article
   const handleCreateArticle = async (values: ItemFormValues) => {
     try {
+      // Use selectedLibrary ID if it's not the default, otherwise potentially handle differently
+      const targetLibraryId = selectedLibrary === 'default' ? projet.id : values.bibliotheque_id || selectedLibrary;
+
       await createLibraryItem(
         values.designation,
         values.lot,
         values.unite as ItemUnit,
         values.prix_unitaire,
-        values.bibliotheque_id || projet.id,
+        targetLibraryId, // Use the determined library ID
         values.description,
         values.subCategory,
         values.tags
       );
       
-      // Refresh items
-      const fetchedItems = await getLibraryItems(selectedLibrary);
-      setItems(fetchedItems as unknown as LibraryItem[] || []);
-      
+      // Refresh items based on current selection
+      if (selectedLibrary === 'default') {
+        // If default is selected, just update the local state or re-fetch all if default data isn't static
+        // For now, we assume DEFAULT_LIBRARY_ITEMS is static and don't refresh items list here
+         toast.success('Article créé, mais pas ajouté à la bibliothèque par défaut statique.');
+      } else {
+         const fetchedItems = await getLibraryItems(selectedLibrary);
+         setItems(fetchedItems as unknown as LibraryItem[] || []);
+         toast.success('Article créé avec succès dans la bibliothèque sélectionnée');
+      }
+
       setIsCreateArticleOpen(false);
       form.reset();
-      toast.success('Article créé avec succès');
+     
     } catch (error) {
       console.error('Error creating article:', error);
       toast.error('Erreur lors de la création de l\'article');
@@ -302,21 +437,29 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
     setIsCollapsed(!isCollapsed);
   };
   
+  const toggleLot = useCallback((lot: string) => {
+    setExpandedLots(prev => 
+      prev.includes(lot) 
+        ? prev.filter(l => l !== lot)
+        : [...prev, lot]
+    );
+  }, []);
+  
+  // New toggle function for subcategories
+  const toggleSubCategory = useCallback((subCategory: string) => {
+      setExpandedSubCategories(prev => 
+          prev.includes(subCategory)
+              ? prev.filter(sc => sc !== subCategory)
+              : [...prev, subCategory]
+      );
+  }, []);
+
   return (
     <TooltipProvider>
       <div 
-        className={`sidebar flex flex-col h-full relative transition-all duration-300 border-r bg-white`} 
+        className={`relative h-full flex flex-col overflow-hidden transition-all duration-300 border-r bg-white`} 
         style={{ width: isCollapsed ? '50px' : `${panelWidth}px` }}
       >
-        {/* Resize handle */}
-        <div 
-          className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-blue-300 transition-colors z-20"
-          onMouseDown={handleResizeStart}
-        />
-        <div 
-          className="absolute right-0.5 top-0 bottom-0 w-0.5 bg-gray-200"
-        />
-        
         {isCollapsed ? (
           <div className="flex flex-col items-center p-2">
             <span className="text-xs font-medium text-gray-500 rotate-90 mt-4">Bibliothèque</span>
@@ -329,193 +472,221 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ projet, selectedSurface, onAddOuv
             </div>
           </div>
         ) : (
-          <div className="p-2 overflow-hidden">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-primary">Bibliothèque</h2>
-              <PanelToggle
-                isCollapsed={isCollapsed}
-                onToggle={toggleCollapse}
-                position="left"
-              />
-            </div>
-            
-            {selectedSurface && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
-                <h3 className="text-sm font-medium text-primary">Surface sélectionnée</h3>
-                <p className="text-xs text-gray-600">{selectedSurface.nom} ({selectedSurface.superficie.toFixed(2)} {selectedSurface.unite})</p>
-                <p className="text-xs text-gray-500 mt-1">Les ouvrages ajoutés seront associés à cette surface</p>
+          <Card className="w-full h-full flex flex-col border-0">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between mb-2">
+                <CardTitle className="flex items-center gap-2 text-metr-blue font-montserrat">
+                  <Library className="h-6 w-6" />
+                  Bibliothèque d'articles
+                </CardTitle>
+                <PanelToggle
+                  isCollapsed={isCollapsed}
+                  onToggle={toggleCollapse}
+                  position="left"
+                />
               </div>
-            )}
-            
-            <div className="space-y-3">
-              {/* Library Selection with Search */}
-              <SearchableSelect
-                value={selectedLibrary}
-                onChange={setSelectedLibrary}
-                options={libraries.map(lib => lib.name)}
-                placeholder="Choisir une bibliothèque"
-              />
+
+              {selectedSurface && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
+                  <h3 className="text-sm font-medium text-primary">Surface sélectionnée</h3>
+                  <p className="text-xs text-gray-600">{selectedSurface.nom} ({selectedSurface.superficie.toFixed(2)} {selectedSurface.unite})</p>
+                  <p className="text-xs text-gray-500 mt-1">Les ouvrages ajoutés seront associés à cette surface</p>
+                </div>
+              )}
               
+              {/* Library Selection */}
+              <div className="mb-4">
+                <SearchableSelect
+                  value={selectedLibrary}
+                  onChange={setSelectedLibrary}
+                  options={libraries.map(lib => lib.name)}
+                  placeholder="Choisir une bibliothèque"
+                />
+              </div>
+
               {/* Search input with create button */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     placeholder="Rechercher un article..."
-                    className="pl-8"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
                   />
                 </div>
-                <Button
+                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setIsCreateArticleOpen(true)}
                   title="Créer un nouvel article"
-                  className="px-3"
+                  className="px-2"
+                  disabled={selectedLibrary === 'default'} // Disable if default library is selected
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              
-              {/* Filters with search functionality */}
+
+            </CardHeader>
+
+            <CardContent className="flex-1 overflow-y-auto space-y-2">
+              {/* Items List */}
               <div className="space-y-2">
-                <SearchableSelect
-                  value={selectedLot}
-                  onChange={setSelectedLot}
-                  options={uniqueLots}
-                  placeholder="Tous les lots"
-                />
-                
-                <SearchableSelect
-                  value={selectedSubCategory}
-                  onChange={setSelectedSubCategory}
-                  options={uniqueSubCategories}
-                  placeholder="Toutes les catégories"
-                />
-                
-                <SearchableSelect
-                  value={selectedUnit}
-                  onChange={setSelectedUnit}
-                  options={uniqueUnits}
-                  placeholder="Toutes les unités"
-                />
-              </div>
-              
-              {/* Library items list with pagination */}
-              <div className="space-y-2 mt-4 h-[calc(100vh-340px)] overflow-y-auto">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-medium text-gray-700">Articles disponibles</h3>
-                  <span className="text-xs text-gray-500">
-                    {filteredItems.length > 0 ? 
-                      `${(currentPage - 1) * ITEMS_PER_PAGE + 1}-${Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} sur ${filteredItems.length}` : 
-                      '0 articles'}
-                  </span>
-                </div>
-                
                 {isLoading ? (
-                  <p className="text-sm text-center py-8 text-gray-500">Chargement des articles...</p>
-                ) : paginatedItems.length > 0 ? (
-                  <ul className="space-y-1">
-                    {paginatedItems.map((item) => (
-                      <li key={item.id} className="bg-white border rounded-md p-1 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start">
-                          <div style={{ width: `${Math.max(85, (panelWidth - 100) / panelWidth * 100)}%` }}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <p className="font-medium text-xs truncate">
-                                  {truncateText(item.designation, Math.floor(panelWidth / 12))}
-                                </p>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {item.designation}
-                              </TooltipContent>
-                            </Tooltip>
-                            
-                            <div className="flex justify-between text-xs text-gray-500">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="truncate" style={{ maxWidth: `${Math.floor(panelWidth / 3)}px` }}>
-                                    {truncateText(item.lot || '', Math.floor(panelWidth / 20))} - {truncateText(item.subCategory || '', Math.floor(panelWidth / 30))}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {item.lot} - {item.subCategory}
-                                </TooltipContent>
-                              </Tooltip>
-                              <span className="text-xs ml-1">{item.prix_unitaire.toFixed(2)} €/{item.unite}</span>
-                            </div>
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="text-sm">Chargement des articles...</p>
+                  </div>
+                ) : searchTerm ? (
+                  // Flat view for search results
+                  <div className="space-y-2">
+                    {flattenedSearchResults.length > 0 ? (
+                      flattenedSearchResults.map((item) => (
+                        <div 
+                          key={item.id}
+                          className="group flex items-center justify-between p-2 hover:bg-white rounded border hover:shadow-sm transition-all"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-gray-500 mb-1">{item.lot}</div>
+                            <div className="font-medium text-sm truncate">{item.designation}</div>
+                            <div className="text-xs font-medium text-orange-600">{item.prix_unitaire.toFixed(2)} €/{item.unite}</div>
                           </div>
+                          
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 w-7 p-0 rounded-full bg-metrBlue text-white hover:bg-blue-800 flex-shrink-0"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 h-8 w-8 p-0 bg-orange-500 text-white hover:bg-orange-600 flex-shrink-0"
                             onClick={() => handleAddItem(item)}
                             title={`Ajouter et mesurer (${getMeasurementType(item.unite)})`}
                           >
                             <Plus className="h-4 w-4" />
-                            <span className="sr-only">Ajouter</span>
                           </Button>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Aucun article trouvé</p>
+                        <p className="text-xs">Essayez d'autres mots-clés</p>
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <p className="text-sm text-center py-8 text-gray-500">Aucun article trouvé avec ces critères de recherche.</p>
-                )}
-                
-                {/* Pagination */}
-                {filteredItems.length > ITEMS_PER_PAGE && (
-                  <Pagination className="mt-4">
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
-                        />
-                      </PaginationItem>
-                      
-                      {getPageNumbers().map((page, i) => (
-                        <PaginationItem key={i}>
-                          {page === 'ellipsis' ? (
-                            <span className="px-2">...</span>
-                          ) : (
-                            <PaginationLink
-                              isActive={currentPage === page}
-                              onClick={() => typeof page === 'number' && setCurrentPage(page)}
-                            >
-                              {page}
-                            </PaginationLink>
-                          )}
-                        </PaginationItem>
-                      ))}
-                      
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                  // Hierarchical view when no search
+                  <div className="space-y-2">
+                    {lotEntries.map(([lot, subCategoryGroups]) => (
+                      <Collapsible 
+                        key={lot}
+                        open={expandedLots.includes(lot)}
+                        onOpenChange={() => toggleLot(lot)}
+                      >
+                        <CollapsibleTrigger asChild>
+                          <div className="flex items-center justify-between p-2 hover:bg-gray-100 rounded cursor-pointer transition-colors">
+                            <div className="flex items-center gap-2">
+                               {/* Render the icon */} 
+                                {LOT_ICONS[lot] ? (
+                                    React.createElement(LOT_ICONS[lot], { className: 'h-4 w-4 text-gray-600' })
+                                ) : (
+                                    React.createElement(LOT_ICONS.default, { className: 'h-4 w-4 text-gray-600' })
+                                )}
+                              <span className="font-medium text-sm text-gray-800">{lot}</span>
+                            </div>
+                            {expandedLots.includes(lot) ? (
+                              <ChevronDown className="w-4 h-4 text-gray-600" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-gray-600" />
+                            )}
+                          </div>
+                        </CollapsibleTrigger>
+
+                        <CollapsibleContent className="ml-4 space-y-1">
+                          {/* Group items by SubCategory within the lot */}
+                          {Object.entries(subCategoryGroups).map(([subCategory, subCategoryItems]) => (
+                             <Collapsible 
+                                key={subCategory}
+                                open={expandedSubCategories.includes(subCategory)}
+                                onOpenChange={() => toggleSubCategory(subCategory)}
+                             >
+                               <CollapsibleTrigger asChild>
+                                 <div className="border-l-2 border-gray-200 pl-4 p-1 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+                                     <div className="font-medium text-xs text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                                          {expandedSubCategories.includes(subCategory) ? (
+                                              <ChevronDown className="h-3 w-3 text-gray-500" />
+                                          ) : (
+                                              <ChevronRight className="h-3 w-3 text-gray-500" />
+                                          )}
+                                         {subCategory}
+                                     </div>
+                                 </div>
+                               </CollapsibleTrigger>
+                               <CollapsibleContent className="pl-4 space-y-1">
+                                  {subCategoryItems.map((item) => (
+                                      <div 
+                                          key={item.id}
+                                          className="group flex items-center justify-between p-2 hover:bg-white rounded border hover:shadow-sm transition-all"
+                                      >
+                                          <div className="flex-1 min-w-0">
+                                              <div className="font-medium text-sm truncate">{item.designation}</div>
+                                              {item.description && <div className="text-xs text-gray-500">{item.description}</div>}
+                                              <div className="text-xs font-medium text-orange-600">{item.prix_unitaire.toFixed(2)} €/{item.unite}</div>
+                                          </div>
+                                          
+                                          <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 h-8 w-8 p-0 bg-orange-500 text-white hover:bg-orange-600 flex-shrink-0"
+                                              onClick={() => handleAddItem(item)}
+                                              title={`Ajouter et mesurer (${getMeasurementType(item.unite)})`}
+                                          >
+                                              <Plus className="h-4 w-4" />
+                                          </Button>
+                                      </div>
+                                  ))}
+                                </CollapsibleContent>
+                             </Collapsible>
+                          ))}
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
-      </div>
 
-      {/* Create Article Dialog */}
-      <CreateArticleDialog
-        open={isCreateArticleOpen}
-        onOpenChange={setIsCreateArticleOpen}
-        isEditMode={false}
-        categories={CATEGORIES}
-        units={UNITS}
-        libraries={libraries.map(lib => lib.name)}
-        form={form}
-        onSubmit={handleCreateArticle}
-      />
+        {/* Create Article Dialog */}
+        <CreateArticleDialog
+          open={isCreateArticleOpen}
+          onOpenChange={setIsCreateArticleOpen}
+          isEditMode={false}
+          categories={Object.keys(DEFAULT_LIBRARY_ITEMS.reduce((acc, item) => {
+              if(item.subCategory) acc[item.subCategory] = true;
+              return acc;
+          }, {} as Record<string, boolean>))}
+          units={UNITS}
+          libraries={libraries.map(lib => lib.name)}
+          form={form}
+          onSubmit={handleCreateArticle}
+          predefinedLots={[
+            { id: '01', name: 'TERRASSEMENTS GÉNÉRAUX' },
+            { id: '02', name: 'GROS ŒUVRE - MAÇONNERIE' },
+            { id: '03', name: 'MÉTALLERIE, FERRONNERIE' },
+            { id: '04', name: 'PLÂTRERIE' },
+            { id: '05', name: 'ISOLATION' },
+            { id: '06', name: 'CARRELAGES, REVÊTEMENTS' },
+            { id: '07', name: 'SOLS SOUPLES' },
+            { id: '08', name: 'PEINTURES' },
+            { id: '09', name: 'MENUISERIES INTÉRIEURES' },
+            { id: '10', name: 'MENUISERIES EXTÉRIEURES' },
+            { id: '11', name: 'ÉLECTRICITÉ COURANTS FORTS' },
+            { id: '12', name: 'PLOMBERIES SANITAIRES' },
+            { id: '13', name: 'COUVERTURE, ZINGUERIE' },
+            { id: '14', name: 'ÉTANCHÉITÉ' },
+            { id: '15', name: 'STORES ET FERMETURES' },
+            { id: '16', name: 'VRD, ESPACES EXTÉRIEURS' }
+          ]}
+        />
+      </div>
     </TooltipProvider>
   );
 };
