@@ -6,7 +6,6 @@ import LeftPanel from '@/components/project/LeftPanel';
 import CentralPanel from '@/components/project/CentralPanel';
 import RightPanel from '@/components/project/RightPanel';
 import NewProjectModal from '@/components/project/NewProjectModal';
-import ProjectToolbar from '@/components/project/ProjectToolbar';
 import ProjectLayout from '@/components/project/ProjectLayout';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import CalibrationGuide from '@/components/project/CalibrationGuide';
@@ -64,7 +63,7 @@ const ProjectViewContent = () => {
           id: 'measure-1',
           type: 'area',
           value: 23.45,
-          unit: 'M2', // Updated to match ItemUnit type
+          unit: 'M2',
           points: [
             {x: 100, y: 100},
             {x: 300, y: 100},
@@ -77,7 +76,7 @@ const ProjectViewContent = () => {
           id: 'measure-2',
           type: 'linear',
           value: 5.75,
-          unit: 'ML', // Updated to match ItemUnit type
+          unit: 'ML',
           points: [
             {x: 150, y: 250},
             {x: 350, y: 250}
@@ -88,7 +87,7 @@ const ProjectViewContent = () => {
           id: 'measure-3',
           type: 'count',
           value: 3,
-          unit: 'U', // Updated to match ItemUnit type
+          unit: 'U',
           points: [
             {x: 200, y: 300},
             {x: 250, y: 320},
@@ -99,7 +98,6 @@ const ProjectViewContent = () => {
       ];
       
       setMeasurements(demoMeasurements);
-      
     }, 500);
   }, [id]);
 
@@ -116,7 +114,7 @@ const ProjectViewContent = () => {
     setIsNewProjectModalOpen(false);
   };
 
-  // Handle calibration start
+  // Handle calibration start - only called when user explicitly requests calibration
   const handleStartCalibration = () => {
     startCalibration();
   };
@@ -132,11 +130,7 @@ const ProjectViewContent = () => {
     };
     
     setProjet(updatedProjet);
-    
-    // Auto-start calibration when a new plan is uploaded
-    setTimeout(() => {
-      startCalibration();
-    }, 500);
+    setPlan(newPlan);
   };
 
   // Handle calibration completion
@@ -238,12 +232,6 @@ const ProjectViewContent = () => {
   return (
     <ProjectLayout>
       <Header projet={projet} onNewProject={() => setIsNewProjectModalOpen(true)} />
-      <ProjectToolbar 
-        onCalibrationStart={handleStartCalibration} 
-        onToolChange={handleToolChange}
-        onExportExcel={handleExportExcel}
-        onSaveProject={handleSaveProject}
-      />
       
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel - hidden during calibration */}
@@ -268,6 +256,7 @@ const ProjectViewContent = () => {
             onElementSelected={handleElementSelected}
             selectedSurface={selectedSurface}
             hoveredElementId={hoveredElementId}
+            onAddOuvrage={handleAddOuvrage}
           />
         </div>
         
@@ -282,9 +271,9 @@ const ProjectViewContent = () => {
         )}
       </div>
       
-      {/* Calibration Dialog - Show for introduction (step 0) and instructions (step 1) */}
+      {/* Calibration Dialog - Only show when explicitly started by user */}
       <Dialog 
-        open={isCalibrating && (calibrationStep === 0 || calibrationStep === 1)} 
+        open={false} 
         onOpenChange={() => {}}
       >
         <DialogContent className="p-0 border-0 max-w-xl">

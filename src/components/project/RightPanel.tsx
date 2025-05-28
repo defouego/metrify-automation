@@ -270,7 +270,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
           return newGrouped;
         });
 
-        toast.success('Modification enregistrée');
+    toast.success('Modification enregistrée');
       }
     } catch (error) {
       console.error('Error saving ouvrage:', error);
@@ -287,7 +287,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
   // Handle delete ouvrage
   const handleDeleteOuvrage = (ouvrageId: string, designation?: string) => {
     try {
-      if (designation) {
+    if (designation) {
         const measurementsToDelete = projet.ouvrages.filter(o => o.designation === designation);
         
         if (measurementsToDelete.length > 0) {
@@ -301,7 +301,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
             toast.success(`${measurementsToDelete.length} mesure(s) supprimée(s)`);
           }
         }
-      } else {
+    } else {
         const confirmDelete = window.confirm(
           'Êtes-vous sûr de vouloir supprimer cette mesure ?'
         );
@@ -309,7 +309,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
         if (confirmDelete) {
           projet.ouvrages = projet.ouvrages.filter(o => o.id !== ouvrageId);
           saveToHistory(projet.ouvrages);
-          toast.success('Mesure supprimée');
+      toast.success('Mesure supprimée');
         }
       }
 
@@ -493,17 +493,17 @@ const RightPanel: React.FC<RightPanelProps> = ({
                   >
                     <Redo2 className="h-4 w-4" />
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleExportDevis}
-                    title="Exporter le devis"
-                    className="px-2"
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleExportDevis}
+                  title="Exporter le devis"
+                  className="px-2"
                     aria-label="Exporter le devis"
                     disabled={isLoading}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
                 </div>
               </div>
               
@@ -653,26 +653,26 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                                 onColorChange={(color) => handleColorChange(ouvrage.designation, color)}
                                               />
                                             </div>
-                                          </div>
-
+                                            </div>
+                                            
                                           {/* Article name with sliding effect */}
                                           <div className="flex-1 min-w-0 -ml-[60px] group-hover:ml-0 transition-all duration-200">
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
                                                 <div className="truncate">
-                                                  <InlineEdit
-                                                    value={ouvrage.designation || ''}
-                                                    onSave={(value) => handleInlineEditSave(ouvrage.id, 'designation', value)}
-                                                    className="text-xs font-medium"
-                                                  />
-                                                </div>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                {ouvrage.designation}
-                                              </TooltipContent>
-                                            </Tooltip>
+                                                    <InlineEdit
+                                                      value={ouvrage.designation || ''}
+                                                      onSave={(value) => handleInlineEditSave(ouvrage.id, 'designation', value)}
+                                                      className="text-xs font-medium"
+                                                    />
+                                                  </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  {ouvrage.designation}
+                                                </TooltipContent>
+                                              </Tooltip>
                                           </div>
-
+                                          
                                           {/* Right side - values with fixed width */}
                                           <div className="flex items-center gap-2 text-xs whitespace-nowrap w-[120px] justify-end">
                                             <span>{ouvrage.quantite} {ouvrage.unite}</span>

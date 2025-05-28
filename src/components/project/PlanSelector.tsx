@@ -1,15 +1,14 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, Plus, Layers } from 'lucide-react';
+import { FileText, Upload } from 'lucide-react';
 import { Plan, Projet } from '@/types/metr';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface PlanSelectorProps {
   projet: Projet;
@@ -22,43 +21,62 @@ const PlanSelector: React.FC<PlanSelectorProps> = ({
   projet,
   currentPlan,
   onSelectPlan,
-  onUploadPlan
+  onUploadPlan,
 }) => {
+  // Ajouter le plan de test aux plans disponibles
+  const testPlan: Plan = {
+    id: 'test-plan',
+    nom: 'Plan de test',
+    elements: {
+      portes: [],
+      fenetres: [],
+      murs: [],
+      pieces: []
+    }
+  };
+
+  const allPlans = [
+    ...(projet.plans || []),
+    testPlan
+  ];
+
   return (
-    <div className="absolute top-3 left-3 z-10">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="bg-white shadow-sm flex items-center gap-2">
-            <Layers size={16} />
-            <span>{currentPlan ? currentPlan.nom : 'Sélectionner un plan'}</span>
-            <ChevronDown size={14} />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>Plans du projet</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          
-          {projet.plans.length > 0 ? (
-            projet.plans.map((plan) => (
-              <DropdownMenuItem 
-                key={plan.id} 
-                className={`${currentPlan?.id === plan.id ? 'bg-gray-100 font-medium' : ''}`}
-                onClick={() => onSelectPlan(plan)}
-              >
-                {plan.nom}
-              </DropdownMenuItem>
-            ))
-          ) : (
-            <DropdownMenuItem disabled>Aucun plan disponible</DropdownMenuItem>
-          )}
-          
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={onUploadPlan} className="text-blue-600">
-            <Plus size={16} className="mr-2" />
-            Ajouter un nouveau plan
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <div className="flex items-center gap-2">
+      <Select
+        value={currentPlan?.id || ''}
+        onValueChange={(value) => {
+          const selectedPlan = allPlans.find(p => p.id === value);
+          if (selectedPlan) onSelectPlan(selectedPlan);
+        }}
+      >
+        <SelectTrigger className="w-[200px] bg-white">
+          <SelectValue placeholder="Sélectionner un plan">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              <span>{currentPlan?.nom || 'Sélectionner un plan'}</span>
+            </div>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {allPlans.map((plan) => (
+            <SelectItem key={plan.id} value={plan.id}>
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                <span>{plan.nom}</span>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={onUploadPlan}
+        className="bg-white"
+      >
+        <Upload className="h-4 w-4" />
+      </Button>
     </div>
   );
 };

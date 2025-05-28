@@ -1,10 +1,8 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Element, Plan, Projet, Surface } from '@/types/metr';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { processUploadedDWG, highlightSimilarElements } from '@/utils/plan-utils';
-import PlanSelector from '@/components/project/PlanSelector';
 import PlanViewer from '@/components/project/PlanViewer';
 import { Upload } from 'lucide-react';
 
@@ -19,6 +17,7 @@ interface CentralPanelProps {
   onElementSelected: (element: Element) => void;
   selectedSurface: Surface | null;
   hoveredElementId: string | null;
+  onAddOuvrage: (ouvrage: any) => void;
 }
 
 const CentralPanel: React.FC<CentralPanelProps> = ({ 
@@ -31,7 +30,8 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   onCalibrationComplete,
   onElementSelected,
   selectedSurface,
-  hoveredElementId
+  hoveredElementId,
+  onAddOuvrage
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
@@ -129,24 +129,19 @@ const CentralPanel: React.FC<CentralPanelProps> = ({
   
   return (
     <div className="relative flex-1 h-full overflow-hidden">
-      {plan && (
-        <PlanSelector 
-          projet={projet}
-          currentPlan={plan}
-          onSelectPlan={handleSelectPlan}
-          onUploadPlan={handleUploadClick}
-        />
-      )}
-      
       {/* Plan Viewer Component */}
       {plan && (
         <PlanViewer 
           projectId={projet.id}
           isCalibrating={isCalibrating}
           plan={plan}
+          projet={projet}
           onElementSelected={onElementSelected}
           selectedSurface={selectedSurface?.id}
           hoveredElementId={hoveredElementId}
+          onSelectPlan={handleSelectPlan}
+          onUploadPlan={handleUploadClick}
+          onAddOuvrage={onAddOuvrage}
         />
       )}
       

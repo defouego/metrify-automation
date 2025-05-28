@@ -3,6 +3,7 @@ import { CalibrationPoint, ElementType } from '@/types/project';
 import { toast } from 'sonner';
 
 export function useCalibration() {
+  // Initialize with calibration already complete
   const [isCalibrating, setIsCalibrating] = useState(false);
   // Calibration steps:
   // 0: Not calibrating
